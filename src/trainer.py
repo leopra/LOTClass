@@ -22,6 +22,12 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+
+from util import *
+from sklearn.feature_extraction.text import CountVectorizer
+from collections import defaultdict
+import math
+
 class LOTClassTrainer(object):
 
     def __init__(self, args):
@@ -30,7 +36,7 @@ class LOTClassTrainer(object):
         self.dataset_dir = args.dataset_dir
         self.dist_port = args.dist_port
         self.num_cpus = min(10, cpu_count() - 1) if cpu_count() > 1 else 1
-        self.world_size = args.gpus
+        self.world_size = args.gpus #number gpus
         self.train_batch_size = args.train_batch_size
         self.eval_batch_size = args.eval_batch_size
         self.accum_steps = args.accum_steps
@@ -38,7 +44,7 @@ class LOTClassTrainer(object):
         assert abs(eff_batch_size - 128) < 10, f"Make sure the effective training batch size is around 128, current: {eff_batch_size}"
         print(f"Effective training batch size: {eff_batch_size}")
         self.pretrained_lm = 'bert-base-uncased'
-        self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_lm, do_lower_case=True)
+        self.tokenizer = BertTokenizer.from_pretrained(self.pretrained_lm, do_lower_case=True) #tokenizer
         self.vocab = self.tokenizer.get_vocab()
         self.vocab_size = len(self.vocab)
         self.mask_id = self.vocab[self.tokenizer.mask_token]
@@ -210,6 +216,7 @@ class LOTClassTrainer(object):
         self.all_label_name_ids = [self.mask_id]
         self.all_label_names = [self.tokenizer.mask_token]
         for class_idx in self.label_name_dict:
+            #CHANGE : map word to class {'politics':2, ...}
             for word in self.label_name_dict[class_idx]:
                 assert word not in self.label2class, f"\"{word}\" used as the label name by multiple classes!"
                 self.label2class[word] = class_idx
@@ -257,6 +264,7 @@ class LOTClassTrainer(object):
     # construct category vocabulary (distributed function)
     def category_vocabulary_dist(self, rank, top_pred_num=50, loader_name="category_vocab.pt"):
         model = self.set_up_dist(rank)
+        #CHANGE: eval switches off some layers that behave differently betweeen traning and predictiong
         model.eval()
         label_name_dataset_loader = self.make_dataloader(rank, self.label_name_data, self.eval_batch_size)
         category_words_freq = {i: defaultdict(float) for i in range(self.num_class)}
@@ -629,6 +637,90 @@ class LOTClassTrainer(object):
         f_out = open(out_file, 'w')
         for label in pred_labels:
             f_out.write(str(label.item()) + '\n')
+
+    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index, term_count,
+                        word_to_index, doc_freq_thresh):
+        E_LT = np.zeros((label_count, term_count))
+        components = {}
+        for l in label_docs_dict:
+            components[l] = {}
+            docs = label_docs_dict[l]
+            docfreq_local = calculate_doc_freq(docs)
+            vect = CountVectorizer(vocabulary=list(word_to_index.keys()), tokenizer= self.tokenizer) #lambda x: x.split())
+            X = vect.fit_transform(docs)
+            X_arr = X
+            rel_freq = (np.sum(X_arr, axis=0) / len(docs)).toarray()
+            names = vect.get_feature_names()
+            for i, name in enumerate(names):
+                try:
+                    if docfreq_local[name] < doc_freq_thresh:
+                        continue
+                except:
+                    continue
+                E_LT[label_to_index[l]][word_to_index[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[
+                    name] * np.tanh(rel_freq[i])
+                components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
+                                       "idf": inv_docfreq[name],
+                                       "rel_freq": np.tanh(rel_freq[i]),
+                                       "rank": E_LT[label_to_index[l]][word_to_index[name]]}
+        return E_LT, components
+
+    def expand(self, E_LT, index_to_label, index_to_word, it, label_count, n1, old_label_term_dict, label_docs_dict):
+        word_map = {}
+        zero_docs_labels = set()
+        for l in range(label_count):
+            if not np.any(E_LT):
+                continue
+            elif len(label_docs_dict[index_to_label[l]]) == 0:
+                zero_docs_labels.add(index_to_label[l])
+            else:
+                n = min(n1 * (it), int(math.log(len(label_docs_dict[index_to_label[l]]), 1.5)))
+                inds_popular = E_LT[l].argsort()[::-1][:n]
+                for word_ind in inds_popular:
+                    word = index_to_word[word_ind]
+                    try:
+                        temp = word_map[word]
+                        if E_LT[l][word_ind] > temp[1]:
+                            word_map[word] = (index_to_label[l], E_LT[l][word_ind])
+                    except:
+                        word_map[word] = (index_to_label[l], E_LT[l][word_ind])
+
+        new_label_term_dict = defaultdict(set)
+        for word in word_map:
+            label, val = word_map[word]
+            new_label_term_dict[label].add(word)
+        for l in zero_docs_labels:
+            new_label_term_dict[l] = old_label_term_dict[l]
+        return new_label_term_dict
+
+    def expansion(self, loader_name="train.pt"):
+        loader_file = os.path.join(self.dataset_dir, loader_name)
+        if os.path.exists(loader_file):
+            print(f"Loading encoded texts from {loader_file}")
+            data = torch.load(loader_file)
+        else:
+            print('NO LOADER FOUND')
+            return
+
+        label_count = self.num_class
+        term_count = self.vocab_size
+        #TODO HARDCODED
+        label_term_dict = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
+        rank=0
+        train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
+        pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred")
+
+        label_docs_dict = get_label_docs_dict(data['input_ids'], label_term_dict, pred_labels)
+
+        docfreq = calculate_df_doc_freq(df)
+        inv_docfreq = calculate_inv_doc_freq(df, docfreq)
+
+        E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
+                                                term_count, word_to_index, doc_freq_thresh)
+
+        label_term_dict = expand(E_LT, index_to_label, index_to_word, it, label_count, n1, label_term_dict,
+                                 label_docs_dict)
+        print('Expansion: ', label_term_dict)
 
     # print error message based on CUDA memory error
     def cuda_mem_error(self, err, mode, rank):
