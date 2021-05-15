@@ -649,10 +649,10 @@ class LOTClassTrainer(object):
             docs = label_docs_dict[l]
             docs = [' '.join(list(map(str, doc))) for doc in docs]
             docfreq_local = calculate_doc_freq(docs)
-            vect = CountVectorizer() #lambda x: x.split())
+            vect = CountVectorizer()
             X = vect.fit_transform(docs)
-            X_arr = X
-            rel_freq = (np.sum(X_arr, axis=0) / len(docs)).toarray()
+            rel_freq = X.sum(axis=0) / len(docs)
+            rel_freq = np.asarray(rel_freq).reshape(-1)
             names = vect.get_feature_names()
             for i, name in enumerate(names):
                 try:
@@ -733,12 +733,9 @@ class LOTClassTrainer(object):
 
         label_docs_dict = get_label_docs_dict(df, label_term_dict, pred_labels)
 
-        print(label_docs_dict)
-
         docfreq = calculate_df_doc_freq(df)
         inv_docfreq = calculate_inv_doc_freq(df, docfreq)
 
-        print('aaaaaaaa')
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
                                                 term_count, self.vocab, doc_freq_thresh=5)
 
