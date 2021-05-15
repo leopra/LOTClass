@@ -711,11 +711,10 @@ class LOTClassTrainer(object):
         #TODO HARDCODED
         index_to_label = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
         label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
-        label_to_index = {(i,x) for (x,i) in index_to_label.items()}
+        label_to_index = dict([(i,x) for (x,i) in index_to_label.items()])
 
 
         ##### PREDICTION AND EXPANSION
-        print(os.listdir(self.dataset_dir))
         loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
         assert os.path.exists(loader_file)
         print(f"\nLoading final model from {loader_file}, seed expansion")
@@ -725,7 +724,6 @@ class LOTClassTrainer(object):
         test_dataset_loader = DataLoader(test_set, sampler=SequentialSampler(test_set), batch_size=self.eval_batch_size)
         #pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred").numpy()
 
-        print('len', len(test_set))
         import random
         pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(test_set))])
         df = data['input_ids'].numpy()
@@ -737,8 +735,9 @@ class LOTClassTrainer(object):
         inv_docfreq = calculate_inv_doc_freq(df, docfreq)
 
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
-                                                term_count, self.vocab, doc_freq_thresh=5)
+                                                term_count, self.vocab, doc_freq_thresh=0) #CHANGE put again at 5
 
+        print(components)
         label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, 1, label_count, label_term_dict, label_docs_dict, n1=5)
 
         print('Expansion: ', label_term_dict)
