@@ -706,21 +706,22 @@ class LOTClassTrainer(object):
         term_count = self.vocab_size
         #TODO HARDCODED
         label_term_dict = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
-        rank=0
+        label_to_index = {(i,x) for (x,i) in label_term_dict.items()}
+        #rank=0
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
         pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred")
 
         label_docs_dict = get_label_docs_dict(data['input_ids'], label_term_dict, pred_labels)
 
-        docfreq = calculate_df_doc_freq(df)
-        inv_docfreq = calculate_inv_doc_freq(df, docfreq)
+        docfreq = calculate_df_doc_freq(data['input_ids'])
+        inv_docfreq = calculate_inv_doc_freq(data['input_ids'], docfreq)
 
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
-                                                term_count, word_to_index, doc_freq_thresh)
+                                                term_count, self.vocab, doc_freq_thresh=5)
 
-        label_term_dict = expand(E_LT, index_to_label, index_to_word, it, label_count, n1, label_term_dict,
-                                 label_docs_dict)
-        print('Expansion: ', label_term_dict)
+        #label_term_dict = expand(E_LT, index_to_label, index_to_word, it, label_count, n1, label_term_dict,
+        #                         label_docs_dict)
+        #print('Expansion: ', label_term_dict)
 
     # print error message based on CUDA memory error
     def cuda_mem_error(self, err, mode, rank):
