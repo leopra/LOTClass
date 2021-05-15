@@ -14,6 +14,7 @@ EVAL_BATCH=128
 GPUS=1
 MCP_EPOCH=3
 SELF_TRAIN_EPOCH=1
+FINAL_MODEL=mcp_model.pt
 
 python src/train.py --dataset_dir datasets/${DATASET}/ --label_names_file ${LABEL_NAME_FILE} \
                     --train_file ${TRAIN_CORPUS} \
@@ -22,3 +23,4 @@ python src/train.py --dataset_dir datasets/${DATASET}/ --label_names_file ${LABE
                     --train_batch_size ${TRAIN_BATCH} --accum_steps ${ACCUM_STEP} --eval_batch_size ${EVAL_BATCH} \
                     --gpus ${GPUS} \
                     --mcp_epochs ${MCP_EPOCH} --self_train_epochs ${SELF_TRAIN_EPOCH} \
+                    --final_model ${FINAL_MODEL}

@@ -623,8 +623,7 @@ class LOTClassTrainer(object):
             self.cuda_mem_error(err, "eval", rank)
     
     # use trained model to make predictions on the test set
-    #CHANGED final_model.pt to mcp_model.pt
-    def write_results(self, loader_name="mcp_model.pt", out_file="out.txt"):
+    def write_results(self, loader_name="final_model.pt", out_file="out.txt"):
         print(os.listdir(self.dataset_dir))
         loader_file = os.path.join(self.dataset_dir, loader_name)
         assert os.path.exists(loader_file)
