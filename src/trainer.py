@@ -705,18 +705,25 @@ class LOTClassTrainer(object):
             print('NO LOADER FOUND')
             return
 
+        ### VARIABLES INTEGRATION
         label_count = self.num_class
         term_count = self.vocab_size
         #TODO HARDCODED
         index_to_label = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
         label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
         label_to_index = {(i,x) for (x,i) in index_to_label.items()}
-        rank=0
-        train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
-        loader_file= os.path.join(self.dataset_dir, 'mcp_train.pt')
+
+
+        ##### PREDICTION AND EXPANSION
+        print(os.listdir(self.dataset_dir))
+        loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
+        assert os.path.exists(loader_file)
+        print(f"\nLoading final model from {loader_file}, seed expansion")
         self.model.load_state_dict(torch.load(loader_file))
         self.model.to(0)
-        pred_labels = self.inference(self.model, train_dataset_loader, rank, return_type="pred")
+        test_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
+        test_dataset_loader = DataLoader(test_set, sampler=SequentialSampler(test_set), batch_size=self.eval_batch_size)
+        pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred")
 
         label_docs_dict = get_label_docs_dict(data['input_ids'], label_term_dict, pred_labels)
 
