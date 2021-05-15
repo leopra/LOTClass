@@ -653,6 +653,7 @@ class LOTClassTrainer(object):
             X = vect.fit_transform(docs)
             rel_freq = X.sum(axis=0) / len(docs)
             rel_freq = np.asarray(rel_freq).reshape(-1)
+            print(rel_freq)
             names = vect.get_feature_names()
             for i, name in enumerate(names):
                 try:
@@ -737,7 +738,6 @@ class LOTClassTrainer(object):
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
                                                 term_count, self.vocab, doc_freq_thresh=0) #CHANGE put again at 5
 
-        print(components)
         label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, 1, label_count, label_term_dict, label_docs_dict, n1=5)
 
         print('Expansion: ', label_term_dict)
