@@ -263,6 +263,7 @@ class LOTClassTrainer(object):
 
     # construct category vocabulary (distributed function)
     def category_vocabulary_dist(self, rank, top_pred_num=50, loader_name="category_vocab.pt"):
+        print("RANK: ", rank)
         model = self.set_up_dist(rank)
         #CHANGE: eval switches off some layers that behave differently betweeen traning and predictiong
         model.eval()
@@ -463,7 +464,6 @@ class LOTClassTrainer(object):
 
     # prepare self training data and target distribution
     def prepare_self_train_data(self, rank, model, idx):
-        print("RANK: ", rank)
         target_num = min(self.world_size * self.train_batch_size * self.update_interval * self.accum_steps, len(self.train_data["input_ids"]))
         if idx + target_num >= len(self.train_data["input_ids"]):
             select_idx = torch.cat((torch.arange(idx, len(self.train_data["input_ids"])),
