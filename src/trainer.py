@@ -623,7 +623,7 @@ class LOTClassTrainer(object):
             self.cuda_mem_error(err, "eval", rank)
     
     # use trained model to make predictions on the test set
-    def write_results(self, loader_name="final_model.pt", out_file="out.txt"):
+    def write_results(self, loader_name="mcp_model.pt", out_file="out.txt"):
         loader_file = os.path.join(self.dataset_dir, loader_name)
         assert os.path.exists(loader_file)
         print(f"\nLoading final model from {loader_file}")
@@ -645,8 +645,9 @@ class LOTClassTrainer(object):
         for l in label_docs_dict:
             components[l] = {}
             docs = label_docs_dict[l]
+            docs = [' '.join(list(map(str, doc))) for doc in docs]
             docfreq_local = calculate_doc_freq(docs)
-            vect = CountVectorizer(vocabulary=list(word_to_index.keys()), tokenizer= self.tokenizer) #lambda x: x.split())
+            vect = CountVectorizer() #lambda x: x.split())
             X = vect.fit_transform(docs)
             X_arr = X
             rel_freq = (np.sum(X_arr, axis=0) / len(docs)).toarray()
@@ -705,7 +706,8 @@ class LOTClassTrainer(object):
         label_count = self.num_class
         term_count = self.vocab_size
         #TODO HARDCODED
-        label_term_dict = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
+        index_to_label = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
+        label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
         label_to_index = {(i,x) for (x,i) in label_term_dict.items()}
         #rank=0
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
@@ -719,9 +721,9 @@ class LOTClassTrainer(object):
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
                                                 term_count, self.vocab, doc_freq_thresh=5)
 
-        #label_term_dict = expand(E_LT, index_to_label, index_to_word, it, label_count, n1, label_term_dict,
-        #                         label_docs_dict)
-        #print('Expansion: ', label_term_dict)
+        label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, label_count, label_term_dict, label_docs_dict, n1=5)
+
+        print('Expansion: ', label_term_dict)
 
     # print error message based on CUDA memory error
     def cuda_mem_error(self, err, mode, rank):
