@@ -640,8 +640,7 @@ class LOTClassTrainer(object):
         for label in pred_labels:
             f_out.write(str(label.item()) + '\n')
 
-    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index, term_count,
-                        word_to_index, doc_freq_thresh):
+    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index, term_count, doc_freq_thresh):
         E_LT = np.zeros((label_count, term_count))
         components = {}
         for l in label_docs_dict:
@@ -653,20 +652,20 @@ class LOTClassTrainer(object):
             X = vect.fit_transform(docs)
             rel_freq = X.sum(axis=0) / len(docs)
             rel_freq = np.asarray(rel_freq).reshape(-1)
-            print(rel_freq)
             names = vect.get_feature_names()
             for i, name in enumerate(names):
+                name = int(name)
                 try:
                     if docfreq_local[name] < doc_freq_thresh:
                         continue
                 except:
                     continue
-                E_LT[label_to_index[l]][word_to_index[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[
-                    name] * np.tanh(rel_freq[i])
+                E_LT[label_to_index[l]][[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[name] * np.tanh(rel_freq[i])
                 components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
                                        "idf": inv_docfreq[name],
                                        "rel_freq": np.tanh(rel_freq[i]),
-                                       "rank": E_LT[label_to_index[l]][word_to_index[name]]}
+                                       "rank": E_LT[label_to_index[l]][name]}
+                print(E_LT[label_to_index[l]])
         return E_LT, components
 
     def expand(self, E_LT, index_to_label, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
