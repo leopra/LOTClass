@@ -39,7 +39,7 @@ def make_one_hot(y, label_to_index):
 def calculate_df_doc_freq(df):
     docfreq = {}
     docfreq["UNK"] = len(df)
-    for index, row in df.iterrows():
+    for index, row in enumerate(df):
         #TODO row might be not a list
         temp_set = set(row)
         for w in temp_set:
@@ -85,9 +85,8 @@ def get_label_docs_dict(df, label_term_dict, pred_labels):
     label_docs_dict = {}
     for l in label_term_dict:
         label_docs_dict[l] = []
-    for index, row in df.iterrows():
-        line = row["sentence"]
-        label_docs_dict[pred_labels[index]].append(line)
+    for index, row in enumerate(df):
+        label_docs_dict[pred_labels[index]].append(row)
     return label_docs_dict
 
 
