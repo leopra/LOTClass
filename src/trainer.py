@@ -727,7 +727,7 @@ class LOTClassTrainer(object):
 
         print('len', len(test_set))
         import random
-        pred_labels = np.array([random.sample([0,1,2,3]) for x in range(len(test_set))])
+        pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(test_set))])
         df = data['input_ids'].numpy()
         print(pred_labels)
 
