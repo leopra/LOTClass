@@ -735,7 +735,7 @@ class LOTClassTrainer(object):
         inv_docfreq = calculate_inv_doc_freq(df, docfreq)
 
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
-                                                term_count, self.vocab, doc_freq_thresh=0) #CHANGE put again at 5
+                                                term_count, doc_freq_thresh=0) #CHANGE put again at 5
 
         label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, 1, label_count, label_term_dict, label_docs_dict, n1=5)
 
