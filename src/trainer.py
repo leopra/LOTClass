@@ -739,7 +739,7 @@ class LOTClassTrainer(object):
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
                                                 term_count, self.vocab, doc_freq_thresh=5)
 
-        label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, label_count, label_term_dict, label_docs_dict, n1=5)
+        label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, 1, label_count, label_term_dict, label_docs_dict, n1=5)
 
         print('Expansion: ', label_term_dict)
 
