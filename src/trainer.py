@@ -463,6 +463,7 @@ class LOTClassTrainer(object):
 
     # prepare self training data and target distribution
     def prepare_self_train_data(self, rank, model, idx):
+        print("RANK: ", rank)
         target_num = min(self.world_size * self.train_batch_size * self.update_interval * self.accum_steps, len(self.train_data["input_ids"]))
         if idx + target_num >= len(self.train_data["input_ids"]):
             select_idx = torch.cat((torch.arange(idx, len(self.train_data["input_ids"])),
