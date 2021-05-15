@@ -713,7 +713,10 @@ class LOTClassTrainer(object):
         label_to_index = {(i,x) for (x,i) in index_to_label.items()}
         rank=0
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
-        pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred")
+        loader_file='mcp_train.pt'
+        self.model.load_state_dict(torch.load(loader_file))
+        self.model.to(0)
+        pred_labels = self.inference(self.model, train_dataset_loader, rank, return_type="pred")
 
         label_docs_dict = get_label_docs_dict(data['input_ids'], label_term_dict, pred_labels)
 
