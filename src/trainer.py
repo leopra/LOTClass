@@ -668,7 +668,7 @@ class LOTClassTrainer(object):
                                        "rank": E_LT[label_to_index[l]][word_to_index[name]]}
         return E_LT, components
 
-    def expand(self, E_LT, index_to_label, index_to_word, it, label_count, n1, old_label_term_dict, label_docs_dict):
+    def expand(self, E_LT, index_to_label, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
         word_map = {}
         zero_docs_labels = set()
         for l in range(label_count):
