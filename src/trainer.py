@@ -723,16 +723,17 @@ class LOTClassTrainer(object):
         self.model.to(0)
         test_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
         test_dataset_loader = DataLoader(test_set, sampler=SequentialSampler(test_set), batch_size=self.eval_batch_size)
-        pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred")
+        pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred").numpy()
 
+        df = data['input_ids'].numpy()
         print(pred_labels)
 
-        label_docs_dict = get_label_docs_dict(data['input_ids'], label_term_dict, pred_labels)
+        label_docs_dict = get_label_docs_dict(df, label_term_dict, pred_labels)
 
         print(label_docs_dict)
 
-        docfreq = calculate_df_doc_freq(data['input_ids'])
-        inv_docfreq = calculate_inv_doc_freq(data['input_ids'], docfreq)
+        docfreq = calculate_df_doc_freq(df)
+        inv_docfreq = calculate_inv_doc_freq(df, docfreq)
 
         print('aaaaaaaa')
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
