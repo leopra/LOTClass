@@ -709,7 +709,7 @@ class LOTClassTrainer(object):
         #TODO HARDCODED
         index_to_label = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
         label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
-        label_to_index = {(i,x) for (x,i) in label_term_dict.items()}
+        label_to_index = {(i,x) for (x,i) in index_to_label.items()}
         #rank=0
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
         pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred")
