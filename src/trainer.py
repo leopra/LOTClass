@@ -652,6 +652,7 @@ class LOTClassTrainer(object):
             rel_freq = X.sum(axis=0) / len(docs)
             rel_freq = np.asarray(rel_freq).reshape(-1)
             names = vect.get_feature_names()
+            print(names[:10])
             for i, name in enumerate(names):
                 name = int(name)
                 try:
