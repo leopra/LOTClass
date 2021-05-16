@@ -657,9 +657,9 @@ class LOTClassTrainer(object):
                 name = int(name)
                 try:
                     if docfreq_local[name] < doc_freq_thresh:
-                        print('cazzone')
                         continue
                 except:
+                    print('error')
                     continue
                 E_LT[label_to_index[l]][[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[name] * np.tanh(rel_freq[i])
                 components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
