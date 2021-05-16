@@ -647,6 +647,7 @@ class LOTClassTrainer(object):
             docs = label_docs_dict[l]
             docs = [' '.join(list(map(str, doc))) for doc in docs]
             docfreq_local = calculate_doc_freq(docs)
+            print(docfreq_local)
             vect = CountVectorizer()
             X = vect.fit_transform(docs)
             rel_freq = X.sum(axis=0) / len(docs)
@@ -659,7 +660,7 @@ class LOTClassTrainer(object):
                     if docfreq_local[name] < doc_freq_thresh:
                         continue
                 except Exception as e:
-                    print(e.message, e.args)
+                    print(e)
                     continue
                 E_LT[label_to_index[l]][[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[name] * np.tanh(rel_freq[i])
                 components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
