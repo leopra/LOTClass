@@ -58,7 +58,7 @@ def main():
 
     trainer.mcp(top_pred_num=args.top_pred_num, match_threshold=args.match_threshold, epochs=args.mcp_epochs)
     # Self-training 
-    # trainer.self_train(epochs=args.self_train_epochs, loader_name=args.final_model)
+    trainer.self_train(epochs=args.self_train_epochs, loader_name=args.final_model)
     # Write test set results
     trainer.expansion()
 
