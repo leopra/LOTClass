@@ -202,7 +202,7 @@ class LOTClassTrainer(object):
     # read text corpus and labels from files
     def read_data(self, dataset_dir, train_file, test_file, test_label_file):
         self.train_data, self.label_name_data = self.create_dataset(dataset_dir, train_file, None, "train.pt", 
-                                                                    find_label_name=False, label_name_loader_name="label_name_data.pt")
+                                                                    find_label_name=True, label_name_loader_name="label_name_data.pt")
         if test_file is not None:
             self.test_data = self.create_dataset(dataset_dir, test_file, test_label_file, "test.pt")
 
