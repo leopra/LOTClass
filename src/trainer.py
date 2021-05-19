@@ -49,7 +49,7 @@ class LOTClassTrainer(object):
         self.vocab_size = len(self.vocab)
         self.mask_id = self.vocab[self.tokenizer.mask_token]
         self.inv_vocab = {k:v for v, k in self.vocab.items()}
-        self.read_label_names(args.dataset_dir, args.label_names_file)
+        self.read_label_names(args.dataset_dir, args.label_names_file, 'ext_label_names.txt' ) #CHANGE added file with extended dictionary
         self.num_class = len(self.label_name_dict)
         self.model = LOTClassModel.from_pretrained(self.pretrained_lm,
                                                    output_attentions=False,
@@ -207,8 +207,13 @@ class LOTClassTrainer(object):
             self.test_data = self.create_dataset(dataset_dir, test_file, test_label_file, "test.pt")
 
     # read label names from file
-    def read_label_names(self, dataset_dir, label_name_file):
-        label_name_file = open(os.path.join(dataset_dir, label_name_file))
+    def read_label_names(self, dataset_dir, label_name_file, extended_dict):
+        ext_dict = os.path.join(self.dataset_dir, extended_dict)
+        if os.path.exists(ext_dict):
+            print(f"Loading extended category labels {ext_dict}")
+            label_name_file = open(ext_dict)
+        else:
+            label_name_file = open(os.path.join(dataset_dir, label_name_file))
         label_names = label_name_file.readlines()
         self.label_name_dict = {i: [word.lower() for word in category_words.strip().split()] for i, category_words in enumerate(label_names)}
         print(f"Label names used for each class are: {self.label_name_dict}")
@@ -216,7 +221,7 @@ class LOTClassTrainer(object):
         self.all_label_name_ids = [self.mask_id]
         self.all_label_names = [self.tokenizer.mask_token]
         for class_idx in self.label_name_dict:
-            #CHANGE : map word to class {'politics':2, ...}
+            #map word to class {'politics':2, ...}
             for word in self.label_name_dict[class_idx]:
                 assert word not in self.label2class, f"\"{word}\" used as the label name by multiple classes!"
                 self.label2class[word] = class_idx
@@ -265,7 +270,7 @@ class LOTClassTrainer(object):
     def category_vocabulary_dist(self, rank, top_pred_num=50, loader_name="category_vocab.pt"):
         print("RANK: ", rank)
         model = self.set_up_dist(rank)
-        #CHANGE: eval switches off some layers that behave differently betweeen traning and predictiong
+        #eval switches off some layers that behave differently betweeen traning and predictiong
         model.eval()
         label_name_dataset_loader = self.make_dataloader(rank, self.label_name_data, self.eval_batch_size)
         category_words_freq = {i: defaultdict(float) for i in range(self.num_class)}
@@ -693,6 +698,15 @@ class LOTClassTrainer(object):
             new_label_term_dict[label].add(word)
         for l in zero_docs_labels:
             new_label_term_dict[l] = old_label_term_dict[l]
+
+        #save the extended one in 'ext_label_names.txt'
+        with open(os.path.join(self.dataset_dir, 'ext_label_names.txt')) as f:
+            for l,seeds in sorted(new_label_term_dict.items(), key=lambda x:x[0]):
+                f.write(index_to_label[l])
+                for w in seeds:
+                    f.write(' ' + w)
+                f.write('\n')
+            f.close()
         return new_label_term_dict
 
     def expansion(self, loader_name="train.pt"):
