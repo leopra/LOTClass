@@ -717,16 +717,20 @@ class LOTClassTrainer(object):
         label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
         label_to_index = dict([(i,x) for (x,i) in index_to_label.items()])
 
-
+        pred_label_file = os.path.join(self.dataset_dir, "pred_labels.pt")
         ##### PREDICTION AND EXPANSION
-        loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
-        assert os.path.exists(loader_file)
-        print(f"\nLoading final model from {loader_file}, seed expansion")
-        self.model.load_state_dict(torch.load(loader_file))
-        self.model.to(0)
-        test_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
-        test_dataset_loader = DataLoader(test_set, sampler=SequentialSampler(test_set), batch_size=self.eval_batch_size)
-        pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred").numpy()
+        if os.path.exists(pred_label_file):
+            pred_labels = torch.load(pred_label_file)
+        else:
+            loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
+            assert os.path.exists(loader_file)
+            print(f"\nLoading final model from {loader_file}, seed expansion")
+            self.model.load_state_dict(torch.load(loader_file))
+            self.model.to(0)
+            test_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
+            test_dataset_loader = DataLoader(test_set, sampler=SequentialSampler(test_set), batch_size=self.eval_batch_size)
+            pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred").numpy()
+            torch.save(pred_labels, pred_label_file)
 
         import random
         df = data['input_ids'].numpy()
