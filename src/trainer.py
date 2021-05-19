@@ -718,15 +718,15 @@ class LOTClassTrainer(object):
         loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
         assert os.path.exists(loader_file)
         print(f"\nLoading final model from {loader_file}, seed expansion")
-        #self.model.load_state_dict(torch.load(loader_file))
-        #self.model.to(0)
-        #test_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
-        #test_dataset_loader = DataLoader(test_set, sampler=SequentialSampler(test_set), batch_size=self.eval_batch_size)
-        #pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred").numpy()
+        self.model.load_state_dict(torch.load(loader_file))
+        self.model.to(0)
+        test_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
+        test_dataset_loader = DataLoader(test_set, sampler=SequentialSampler(test_set), batch_size=self.eval_batch_size)
+        pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred").numpy()
 
         import random
         df = data['input_ids'].numpy()
-        pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(df))])
+        #pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(df))])
 
         label_docs_dict = get_label_docs_dict(df, label_term_dict, pred_labels)
 
