@@ -106,25 +106,26 @@ class LOTClassTrainer(object):
             print(f"Loading encoded texts from {loader_file}")
             data = torch.load(loader_file)
         else:
-            print(f"Reading texts from {os.path.join(dataset_dir, text_file)}")
-            corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
-            docs = [doc.strip() for doc in corpus.readlines()]
-            print(f"Converting texts into tensors.")
-            chunk_size = ceil(len(docs) / self.num_cpus)
-            chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
-            results = Parallel(n_jobs=self.num_cpus)(delayed(self.encode)(docs=chunk) for chunk in chunks)
-            input_ids = torch.cat([result[0] for result in results])
-            attention_masks = torch.cat([result[1] for result in results])
-            print(f"Saving encoded texts into {loader_file}")
-            if label_file is not None:
-                print(f"Reading labels from {os.path.join(dataset_dir, label_file)}")
-                truth = open(os.path.join(dataset_dir, label_file))
-                labels = [int(label.strip()) for label in truth.readlines()]
-                labels = torch.tensor(labels)
-                data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels}
-            else:
-                data = {"input_ids": input_ids, "attention_masks": attention_masks}
-            torch.save(data, loader_file)
+            print("WTFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+            # print(f"Reading texts from {os.path.join(dataset_dir, text_file)}")
+            # corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
+            # docs = [doc.strip() for doc in corpus.readlines()]
+            # print(f"Converting texts into tensors.")
+            # chunk_size = ceil(len(docs) / self.num_cpus)
+            # chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
+            # results = Parallel(n_jobs=self.num_cpus)(delayed(self.encode)(docs=chunk) for chunk in chunks)
+            # input_ids = torch.cat([result[0] for result in results])
+            # attention_masks = torch.cat([result[1] for result in results])
+            # print(f"Saving encoded texts into {loader_file}")
+            # if label_file is not None:
+            #     print(f"Reading labels from {os.path.join(dataset_dir, label_file)}")
+            #     truth = open(os.path.join(dataset_dir, label_file))
+            #     labels = [int(label.strip()) for label in truth.readlines()]
+            #     labels = torch.tensor(labels)
+            #     data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels}
+            # else:
+            #     data = {"input_ids": input_ids, "attention_masks": attention_masks}
+            # torch.save(data, loader_file)
         if find_label_name:
             loader_file = os.path.join(dataset_dir, label_name_loader_name)
             if os.path.exists(loader_file):
@@ -202,7 +203,7 @@ class LOTClassTrainer(object):
     # read text corpus and labels from files
     def read_data(self, dataset_dir, train_file, test_file, test_label_file):
         self.train_data, self.label_name_data = self.create_dataset(dataset_dir, train_file, None, "train.pt", 
-                                                                    find_label_name=True, label_name_loader_name="label_name_data.pt")
+                                                                    find_label_name=False, label_name_loader_name="label_name_data.pt")
         if test_file is not None:
             self.test_data = self.create_dataset(dataset_dir, test_file, test_label_file, "test.pt")
 
@@ -647,26 +648,24 @@ class LOTClassTrainer(object):
             docs = label_docs_dict[l]
             docs = [' '.join(list(map(str, doc))) for doc in docs]
             docfreq_local = calculate_doc_freq(docs)
-            print(docfreq_local)
             vect = CountVectorizer()
             X = vect.fit_transform(docs)
             rel_freq = X.sum(axis=0) / len(docs)
             rel_freq = np.asarray(rel_freq).reshape(-1)
             names = vect.get_feature_names()
-            print(names[:10])
+
             for i, name in enumerate(names):
                 name = int(name)
                 try:
                     if docfreq_local[name] < doc_freq_thresh:
                         continue
-                except Exception as e:
+                except:
                     continue
-                E_LT[label_to_index[l]][[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[name] * np.tanh(rel_freq[i])
+                E_LT[l][name] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[name] * np.tanh(rel_freq[i])
                 components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
                                        "idf": inv_docfreq[name],
                                        "rel_freq": np.tanh(rel_freq[i]),
-                                       "rank": E_LT[label_to_index[l]][name]}
-                print(E_LT[label_to_index[l]])
+                                       "rank": E_LT[l][name]}
         return E_LT, components
 
     def expand(self, E_LT, index_to_label, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
@@ -675,19 +674,19 @@ class LOTClassTrainer(object):
         for l in range(label_count):
             if not np.any(E_LT):
                 continue
-            elif len(label_docs_dict[index_to_label[l]]) == 0:
-                zero_docs_labels.add(index_to_label[l])
+            elif len(label_docs_dict[l]) == 0:
+                zero_docs_labels.add(l)
             else:
-                n = min(n1 * (it), int(math.log(len(label_docs_dict[index_to_label[l]]), 1.5)))
+                n = min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
                 inds_popular = E_LT[l].argsort()[::-1][:n]
                 for word_ind in inds_popular:
                     word = index_to_word[word_ind]
                     try:
                         temp = word_map[word]
                         if E_LT[l][word_ind] > temp[1]:
-                            word_map[word] = (index_to_label[l], E_LT[l][word_ind])
+                            word_map[word] = (l, E_LT[l][word_ind])
                     except:
-                        word_map[word] = (index_to_label[l], E_LT[l][word_ind])
+                        word_map[word] = (l, E_LT[l][word_ind])
 
         new_label_term_dict = defaultdict(set)
         for word in word_map:
