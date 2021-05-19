@@ -698,15 +698,6 @@ class LOTClassTrainer(object):
             new_label_term_dict[label].add(word)
         for l in zero_docs_labels:
             new_label_term_dict[l] = old_label_term_dict[l]
-
-        #save the extended one in 'ext_label_names.txt'
-        with open(os.path.join(self.dataset_dir, 'ext_label_names.txt')) as f:
-            for l,seeds in sorted(new_label_term_dict.items(), key=lambda x:x[0]):
-                f.write(index_to_label[l])
-                for w in seeds:
-                    f.write(' ' + w)
-                f.write('\n')
-            f.close()
         return new_label_term_dict
 
     def expansion(self, loader_name="train.pt"):
@@ -747,11 +738,20 @@ class LOTClassTrainer(object):
         inv_docfreq = calculate_inv_doc_freq(df, docfreq)
 
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
-                                                term_count, doc_freq_thresh=0) #CHANGE put again at 5
+                                                term_count, doc_freq_thresh=5) #CHANGE put again at 5
 
         label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, 1, label_count, label_term_dict, label_docs_dict, n1=5)
 
         print('Expansion: ', label_term_dict)
+
+        # save the extended one in 'ext_label_names.txt'
+        with open(os.path.join(self.dataset_dir, 'ext_label_names.txt')) as f:
+            for l, seeds in sorted(label_term_dict.items(), key=lambda x: x[0]):
+                f.write(index_to_label[l])
+                for w in seeds:
+                    f.write(' ' + w)
+                f.write('\n')
+            f.close()
 
     # print error message based on CUDA memory error
     def cuda_mem_error(self, err, mode, rank):
