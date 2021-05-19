@@ -681,7 +681,7 @@ class LOTClassTrainer(object):
             elif len(label_docs_dict[l]) == 0:
                 zero_docs_labels.add(l)
             else:
-                n = min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
+                n = 20 #min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
                 inds_popular = E_LT[l].argsort()[::-1][:n]
                 for word_ind in inds_popular:
                     word = index_to_word[word_ind]
