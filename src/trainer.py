@@ -745,7 +745,7 @@ class LOTClassTrainer(object):
         print('Expansion: ', label_term_dict)
 
         # save the extended one in 'ext_label_names.txt'
-        with open(os.path.join(self.dataset_dir, 'ext_label_names.txt')) as f:
+        with open(os.path.join(self.dataset_dir, 'ext_label_names.txt'), "w+") as f:
             for l, seeds in sorted(label_term_dict.items(), key=lambda x: x[0]):
                 f.write(index_to_label[l])
                 for w in seeds:
