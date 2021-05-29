@@ -676,21 +676,26 @@ class LOTClassTrainer(object):
         word_map = {}
         zero_docs_labels = set()
         for l in range(label_count):
+            N=20
+            count=0
             if not np.any(E_LT):
                 continue
             elif len(label_docs_dict[l]) == 0:
                 zero_docs_labels.add(l)
             else:
-                n = 20 #min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
+                n = 100 #min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
                 inds_popular = E_LT[l].argsort()[::-1][:n]
-                for word_ind in inds_popular:
+                for word_ind in inds_popular and count < N:
                     word = index_to_word[word_ind]
-                    try:
-                        temp = word_map[word]
-                        if E_LT[l][word_ind] > temp[1]:
+                    #TODO continue filtering wrong tokens
+                    if word not in stopwords and '#' not in word :
+                        try:
+                            temp = word_map[word]
+                            if E_LT[l][word_ind] > temp[1]:
+                                word_map[word] = (l, E_LT[l][word_ind])
+                        except:
                             word_map[word] = (l, E_LT[l][word_ind])
-                    except:
-                        word_map[word] = (l, E_LT[l][word_ind])
+                        count += 1
 
         new_label_term_dict = defaultdict(set)
         for word in word_map:
