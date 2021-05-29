@@ -718,6 +718,8 @@ class LOTClassTrainer(object):
             new_label_term_dict[label].add(word)
         for l in zero_docs_labels:
             new_label_term_dict[l] = old_label_term_dict[l]
+
+
         return new_label_term_dict
 
     def expansion(self, loader_name="train.pt"):
@@ -771,10 +773,13 @@ class LOTClassTrainer(object):
 
         # save the extended one in 'ext_label_names.txt'
         with open(os.path.join(self.dataset_dir, 'ext_label_names.txt'), "w+") as f:
+            #I have to be sure there are no duplicates
+            labelss = [x[1] for x in index_to_label.items()]
+
             for l, seeds in sorted(label_term_dict.items(), key=lambda x: x[0]):
-                f.write(index_to_label[l])
                 for w in seeds:
-                    f.write(' ' + w)
+                    if w not in labelss:
+                        f.write(' ' + w)
                 f.write('\n')
             f.close()
 
