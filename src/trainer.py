@@ -20,6 +20,7 @@ from tqdm import tqdm
 from model import LOTClassModel
 import warnings
 warnings.filterwarnings("ignore")
+import string
 
 
 
@@ -685,10 +686,23 @@ class LOTClassTrainer(object):
             else:
                 n = 100 #min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
                 inds_popular = E_LT[l].argsort()[::-1][:n]
-                for word_ind in inds_popular and count < N:
+                for num, word_ind in enumerate(inds_popular) and count < N:
                     word = index_to_word[word_ind]
                     #TODO continue filtering wrong tokens
-                    if word not in stopwords and '#' not in word :
+                    if word in stopwords:
+                        continue
+                    if '##' in word:
+                        continue
+                    if word in string.punctuation:
+                        continue
+                    if any(char.isdigit() for char in word):
+                        continue
+                    #if the word was split by the tokenizer remove it, there is no knowledge about that word
+                    if num < len(inds_popular-1):
+                        if '##' in word[num+1]:
+                            continue
+
+
                         try:
                             temp = word_map[word]
                             if E_LT[l][word_ind] > temp[1]:
