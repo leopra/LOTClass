@@ -686,7 +686,7 @@ class LOTClassTrainer(object):
             else:
                 n = 100 #min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
                 inds_popular = E_LT[l].argsort()[::-1][:n]
-                for num, word_ind in enumerate(inds_popular) and count < N:
+                for num, word_ind in enumerate(inds_popular):
                     word = index_to_word[word_ind]
                     #TODO continue filtering wrong tokens
                     if word in stopwords:
@@ -701,7 +701,8 @@ class LOTClassTrainer(object):
                     if num < len(inds_popular-1):
                         if '##' in word[num+1]:
                             continue
-
+                    if count == N:
+                        break
 
                         try:
                             temp = word_map[word]
