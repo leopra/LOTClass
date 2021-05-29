@@ -717,7 +717,7 @@ class LOTClassTrainer(object):
         label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
         label_to_index = dict([(i,x) for (x,i) in index_to_label.items()])
 
-        pred_label_file = os.path.join(self.dataset_dir, "pred_labels.pt")
+        pred_label_file = os.path.join(self.dataset_dir, "pred_labels_train.pt")
         ##### PREDICTION AND EXPANSION
         if os.path.exists(pred_label_file):
             pred_labels = torch.load(pred_label_file)
