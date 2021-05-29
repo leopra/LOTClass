@@ -699,19 +699,18 @@ class LOTClassTrainer(object):
                     if any(char.isdigit() for char in word):
                         continue
                     #if the word was split by the tokenizer remove it, there is no knowledge about that word
-                    if num < len(inds_popular-1):
+                    if num < len(inds_popular-2):
                         if '##' in word[num+1]:
                             continue
                     if count == N:
                         break
-
-                        try:
-                            temp = word_map[word]
-                            if E_LT[l][word_ind] > temp[1]:
-                                word_map[word] = (l, E_LT[l][word_ind])
-                        except:
+                    try:
+                        temp = word_map[word]
+                        if E_LT[l][word_ind] > temp[1]:
                             word_map[word] = (l, E_LT[l][word_ind])
-                        count += 1
+                    except:
+                        word_map[word] = (l, E_LT[l][word_ind])
+                    count += 1
 
         new_label_term_dict = defaultdict(set)
         for word in word_map:
