@@ -727,13 +727,14 @@ class LOTClassTrainer(object):
             print(f"\nLoading final model from {loader_file}, seed expansion")
             self.model.load_state_dict(torch.load(loader_file))
             self.model.to(0)
-            test_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
-            test_dataset_loader = DataLoader(test_set, sampler=SequentialSampler(test_set), batch_size=self.eval_batch_size)
-            pred_labels = self.inference(self.model, test_dataset_loader, 0, return_type="pred").numpy()
+            train_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
+            train_dataset_loader = DataLoader(train_set, sampler=SequentialSampler(train_set), batch_size=self.eval_batch_size)
+            pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred").numpy()
             torch.save(pred_labels, pred_label_file)
 
         import random
         df = data['input_ids'].numpy()
+        #FOR TESTING use random prediction as the 120k preds take a lot of time
         #pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(df))])
 
         label_docs_dict = get_label_docs_dict(df, label_term_dict, pred_labels)
@@ -742,7 +743,7 @@ class LOTClassTrainer(object):
         inv_docfreq = calculate_inv_doc_freq(df, docfreq)
 
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
-                                                term_count, doc_freq_thresh=5) #CHANGE put again at 5
+                                                term_count, doc_freq_thresh=5)
 
         label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, 1, label_count, label_term_dict, label_docs_dict, n1=5)
 
