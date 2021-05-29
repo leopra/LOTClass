@@ -676,6 +676,7 @@ class LOTClassTrainer(object):
     def expand(self, E_LT, index_to_label, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
         word_map = {}
         zero_docs_labels = set()
+        stopwords_vocab = stopwords.words('english')
         for l in range(label_count):
             N=20
             count=0
@@ -689,7 +690,7 @@ class LOTClassTrainer(object):
                 for num, word_ind in enumerate(inds_popular):
                     word = index_to_word[word_ind]
                     #TODO continue filtering wrong tokens
-                    if word in stopwords:
+                    if word in stopwords_vocab:
                         continue
                     if '##' in word:
                         continue
