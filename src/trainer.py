@@ -692,16 +692,16 @@ class LOTClassTrainer(object):
                     #TODO continue filtering wrong tokens
                     if word in stopwords_vocab:
                         continue
-                    if '##' in word:
+                    if '##' in word:  #TODO fix this as it is not removing the first part of the word
                         continue
                     if word in string.punctuation:
                         continue
                     if any(char.isdigit() for char in word):
                         continue
                     #if the word was split by the tokenizer remove it, there is no knowledge about that word
-                    if num < len(inds_popular-2):
-                        if '##' in word[num+1]:
-                            continue
+                    # if num < len(inds_popular-2):
+                    #     if '##' in word[num+1]: #TODO fix this, wrong place as I lost the words order
+                    #         continue
                     if count == N:
                         break
                     try:
