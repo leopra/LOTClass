@@ -62,7 +62,7 @@ def main():
     # Self-training 
     trainer.self_train(epochs=args.self_train_epochs, loader_name=args.final_model)
     # Write test set results
-    trainer.expansion()
+    #trainer.expansion()
 
     if args.test_file is not None:
         trainer.write_results(loader_name=args.final_model, out_file=args.out_file)
