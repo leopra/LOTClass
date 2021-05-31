@@ -325,7 +325,7 @@ class LOTClassTrainer(object):
             print(f"Class {i} category vocabulary: {[self.inv_vocab[w] for w in category_vocab]}\n")
 
     # prepare self supervision for masked category prediction (distributed function)
-    def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt"):
+    def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt", strictThreshClass = [8]):
         model = self.set_up_dist(rank)
         model.eval()
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
@@ -345,11 +345,14 @@ class LOTClassTrainer(object):
                                         attention_mask=input_mask)
                     _, sorted_res = torch.topk(predictions, top_pred_num, dim=-1)
                     for i, category_vocab in self.category_vocab.items():
+                        k = 1
+                        if i in strictThreshClass:
+                            k = 2
                         match_idx = torch.zeros_like(sorted_res).bool()
                         for word_id in category_vocab:
                             match_idx = (sorted_res == word_id) | match_idx
                         match_count = torch.sum(match_idx.int(), dim=-1)
-                        valid_idx = (match_count > match_threshold) & (input_mask > 0)
+                        valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
                         if valid_doc.any():
                             mask_label = -1 * torch.ones_like(input_ids)
