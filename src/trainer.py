@@ -551,6 +551,7 @@ class LOTClassTrainer(object):
         total_steps = int(len(self.train_data["input_ids"]) * epochs / (self.world_size * self.train_batch_size * self.accum_steps))
         optimizer = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-6, eps=1e-8)
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0.1*total_steps, num_training_steps=total_steps)
+        print("self_train", rank)
         idx = 0
         if self.early_stop:
             agree_count = 0
