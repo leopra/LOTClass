@@ -563,6 +563,7 @@ class LOTClassTrainer(object):
                 else:
                     agree_count = 0
                 if agree_count >= 3:
+                    print('early stopping')
                     break
             self_train_dataset_loader = self.make_dataloader(rank, self_train_dict, self.train_batch_size)
             self.self_train_batches(rank, model, self_train_dataset_loader, optimizer, scheduler, test_dataset_loader)
