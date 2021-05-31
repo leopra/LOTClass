@@ -62,6 +62,7 @@ class LOTClassTrainer(object):
         self.st_loss = nn.KLDivLoss(reduction='batchmean')
         self.update_interval = args.update_interval
         self.early_stop = args.early_stop
+        self.strict_thresh = args.strict_thresh
 
     # set up distributed training
     def set_up_dist(self, rank):
@@ -347,7 +348,7 @@ class LOTClassTrainer(object):
                     for i, category_vocab in self.category_vocab.items():
                         k = 1
                         if i in strictThreshClass:
-                            k = 2
+                            k = self.strict_thresh
                         match_idx = torch.zeros_like(sorted_res).bool()
                         for word_id in category_vocab:
                             match_idx = (sorted_res == word_id) | match_idx
