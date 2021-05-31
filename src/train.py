@@ -9,7 +9,7 @@ def main():
     
     parser.add_argument('--dataset_dir', default='datasets/agnews/',
                         help='dataset directory')
-    parser.add_argument('--strict_thresh', type='int', default=1,
+    parser.add_argument('--strict_thresh', type=int, default=1,
                         help='stricter thresh for more complex categories')
     parser.add_argument('--label_names_file', default='label_names.txt',
                         help='file containing label names (under dataset directory)')
