@@ -24,3 +24,4 @@ python src/train.py --dataset_dir datasets/${DATASET}/ --label_names_file ${LABE
                     --gpus ${GPUS} \
                     --mcp_epochs ${MCP_EPOCH} --self_train_epochs ${SELF_TRAIN_EPOCH} \
                     --final_model ${FINAL_MODEL}
+
