@@ -30,7 +30,7 @@ def calculate_df_doc_freq(df):
     docfreq = {}
     docfreq["UNK"] = len(df)
     for index, row in enumerate(df):
-        line = row["sentence"]
+        line = row
         words = line.strip().split()
         temp_set = set(words)
         for w in temp_set:
