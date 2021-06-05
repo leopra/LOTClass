@@ -88,7 +88,7 @@ def get_label_docs_dict(df, label_term_dict, pred_labels):
     label_docs_dict = {}
     for l in label_term_dict:
         label_docs_dict[l] = []
-    for index, row in df.iterrows():
+    for index, row in enumerate(df):
         line = row
         label_docs_dict[pred_labels[index]].append(line)
     return label_docs_dict
