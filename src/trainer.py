@@ -275,7 +275,7 @@ class LOTClassTrainer(object):
             delete_idx = []
             for j, word_id in enumerate(word_list):
                 word = self.inv_vocab[word_id]
-                if word in self.label_name_dict[i]:
+                if word in self.label_name_dict[self.mappingWordIndexClass[i]]:
                     continue
                 if not word.isalpha() or len(word) == 1 or word in stopwords_vocab or word_id in repeat_words:
                     delete_idx.append(j)
