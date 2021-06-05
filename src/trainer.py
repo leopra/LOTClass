@@ -801,11 +801,17 @@ class LOTClassTrainer(object):
         with open(os.path.join(self.dataset_dir, 'ext_label_names.txt'), "w+") as f:
             #I have to be sure there are no duplicates
             labelss = [x[1] for x in index_to_label.items()]
-
+            num_seed_to_add=1
             for l, seeds in sorted(label_term_dict.items(), key=lambda x: x[0]):
+                cc = 0
                 for w in seeds:
+                    #exit if the correct number of seed is added
+                    if cc == num_seed_to_add:
+                        break
                     if w not in labelss:
                         f.write(' ' + w)
+                        cc +=1
+
                 f.write('\n')
             f.close()
 
