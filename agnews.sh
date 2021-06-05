@@ -14,7 +14,7 @@ EVAL_BATCH=64
 GPUS=1
 MCP_EPOCH=3
 SELF_TRAIN_EPOCH=1
-FINAL_MODEL=final_model.pt #TODO change this to final model when using self-training
+FINAL_MODEL=mcp_model.pt #TODO change this to final model when using self-training
 
 python src/train.py --dataset_dir datasets/${DATASET}/ --label_names_file ${LABEL_NAME_FILE} \
                     --train_file ${TRAIN_CORPUS} \
