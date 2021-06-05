@@ -366,7 +366,7 @@ class LOTClassTrainer(object):
                             match_idx = (sorted_res == word_id) | match_idx #TODO what is going on here
                         match_count = torch.sum(match_idx.int(), dim=-1)
                         #TODO UPDATE THIS WITH Variable threshould
-                        valid_idx = (match_count > match_threshold) & (input_mask > 0)
+                        valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
                         if valid_doc.any():
                             mask_label = -1 * torch.ones_like(input_ids)
