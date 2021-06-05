@@ -1,12 +1,4 @@
-import itertools
-from scipy import spatial
-import os
-import pickle
-import string
 import numpy as np
-from nltk import tokenize
-from sklearn.model_selection import train_test_split
-from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing.text import Tokenizer
 
 import nltk
@@ -34,12 +26,13 @@ def make_one_hot(y, label_to_index):
     return y_new
 
 
-
-
 def calculate_df_doc_freq(df):
     docfreq = {}
-    for index, row in enumerate(df):
-        temp_set = set(row)
+    docfreq["UNK"] = len(df)
+    for index, row in df.iterrows():
+        line = row["sentence"]
+        words = line.strip().split()
+        temp_set = set(words)
         for w in temp_set:
             try:
                 docfreq[w] += 1
@@ -47,16 +40,16 @@ def calculate_df_doc_freq(df):
                 docfreq[w] = 1
     return docfreq
 
-
 def calculate_doc_freq(docs):
     docfreq = {}
     for doc in docs:
-        temp_set = set(doc.split())
+        words = doc.strip().split()
+        temp_set = set(words)
         for w in temp_set:
             try:
-                docfreq[int(w)] += 1
+                docfreq[w] += 1
             except:
-                docfreq[int(w)] = 1
+                docfreq[w] = 1
     return docfreq
 
 
@@ -68,23 +61,36 @@ def calculate_inv_doc_freq(df, docfreq):
     return inv_docfreq
 
 
+
 def create_word_index_maps(word_vec):
     word_to_index = {}
     index_to_word = {}
-    words = list(word_vec.keys())
+    words = word_vec
     for i, word in enumerate(words):
         word_to_index[word] = i
         index_to_word[i] = word
     return word_to_index, index_to_word
 
 
+def preprocess(df):
+    print("Preprocessing data for Tf-Idf..")
+    for index, row in enumerate(df):
+        if index % 100 == 0:
+            print("Finished rows: " + str(index) + " out of " + str(len(df)))
+        line = row
+        words = line.strip().split()
+        new_words = []
+        for word in words:
+            new_words.append(word)
+    return df, new_words
 
 def get_label_docs_dict(df, label_term_dict, pred_labels):
     label_docs_dict = {}
     for l in label_term_dict:
         label_docs_dict[l] = []
-    for index, row in enumerate(df):
-        label_docs_dict[pred_labels[index]].append(row)
+    for index, row in df.iterrows():
+        line = row
+        label_docs_dict[pred_labels[index]].append(line)
     return label_docs_dict
 
 
@@ -100,9 +106,3 @@ def print_label_term_dict(label_term_dict, components, print_components=True):
                     print(val)
             except Exception as e:
                 print("Exception occurred: ", e, val)
-
-
-def fit_get_tokenizer(data, max_words):
-    tokenizer = Tokenizer(num_words=max_words, filters='!"#%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n')
-    tokenizer.fit_on_texts(data)
-    return tokenizer

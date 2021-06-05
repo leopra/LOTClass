@@ -665,15 +665,17 @@ class LOTClassTrainer(object):
         for label in pred_labels:
             f_out.write(str(label.item()) + '\n')
 
-    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index, term_count, doc_freq_thresh):
+
+
+    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index, term_count, word_to_index, doc_freq_thresh):
         E_LT = np.zeros((label_count, term_count))
         components = {}
+
         for l in label_docs_dict:
             components[l] = {}
             docs = label_docs_dict[l]
-            docs = [' '.join(list(map(str, doc))) for doc in docs]
             docfreq_local = calculate_doc_freq(docs)
-            vect = CountVectorizer()
+            vect = CountVectorizer(tokenizer=lambda x: x.split())
             X = vect.fit_transform(docs)
             rel_freq = X.sum(axis=0) / len(docs)
             rel_freq = np.asarray(rel_freq).reshape(-1)
@@ -694,6 +696,7 @@ class LOTClassTrainer(object):
         return E_LT, components
 
     def expand(self, E_LT, index_to_label, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
+
         word_map = {}
         zero_docs_labels = set()
         stopwords_vocab = stopwords.words('english')
@@ -708,20 +711,18 @@ class LOTClassTrainer(object):
                 n = 100 #min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
                 inds_popular = E_LT[l].argsort()[::-1][:n]
                 for num, word_ind in enumerate(inds_popular):
+
                     word = index_to_word[word_ind]
-                    #TODO continue filtering wrong tokens
-                    if word in stopwords_vocab:
+                    #if the word is not in the Bert vocabualry i can just skip
+                    if word not in self.vocab:
                         continue
-                    if '##' in word:  #TODO fix this as it is not removing the first part of the word
+                    if word in stopwords_vocab:
                         continue
                     if word in string.punctuation:
                         continue
                     if any(char.isdigit() for char in word):
                         continue
-                    #if the word was split by the tokenizer remove it, there is no knowledge about that word
-                    # if num < len(inds_popular-2):
-                    #     if '##' in word[num+1]: #TODO fix this, wrong place as I lost the words order
-                    #         continue
+                    #if i found 20 good words i can quit
                     if count == N:
                         break
                     try:
@@ -753,7 +754,6 @@ class LOTClassTrainer(object):
 
         ### VARIABLES INTEGRATION
         label_count = self.num_class
-        term_count = self.vocab_size
         #TODO HARDCODED
         index_to_label = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
         label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
@@ -776,6 +776,8 @@ class LOTClassTrainer(object):
 
         import random
         df = data['input_ids'].numpy()
+        df = [self.tokenizer.decode(doc) for doc in df] #TODO remove special tokens from output
+
         #FOR TESTING use random prediction as the 120k preds take a lot of time
         #pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(df))])
 
@@ -784,10 +786,14 @@ class LOTClassTrainer(object):
         docfreq = calculate_df_doc_freq(df)
         inv_docfreq = calculate_inv_doc_freq(df, docfreq)
 
-        E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
-                                                term_count, doc_freq_thresh=5)
+        df, word_vec = preprocess(df)
+        word_to_index, index_to_word = create_word_index_maps(word_vec)
 
-        label_term_dict = self.expand(E_LT, index_to_label, self.inv_vocab, 1, label_count, label_term_dict, label_docs_dict, n1=5)
+        term_count = len(word_to_index)
+        E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
+                                                term_count, word_to_index, doc_freq_thresh=5)
+
+        label_term_dict = self.expand(E_LT, index_to_label, index_to_word, 1, label_count, label_term_dict, label_docs_dict, n1=5)
 
         print('Expansion: ', label_term_dict)
 
