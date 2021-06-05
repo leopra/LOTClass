@@ -341,7 +341,7 @@ class LOTClassTrainer(object):
             print(f"Class {i} category vocabulary: {[self.inv_vocab[w] for w in category_vocab]}\n")
 
     # prepare self supervision for masked category prediction (distributed function)
-    def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt"):
+    def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt", mappingWordIndexClass):
         model = self.set_up_dist(rank)
         model.eval()
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
@@ -363,13 +363,14 @@ class LOTClassTrainer(object):
                     for i, category_vocab in self.category_vocab.items():
                         match_idx = torch.zeros_like(sorted_res).bool()
                         for word_id in category_vocab:
-                            match_idx = (sorted_res == word_id) | match_idx
+                            match_idx = (sorted_res == word_id) | match_idx #TODO what is going on here
                         match_count = torch.sum(match_idx.int(), dim=-1)
+                        #TODO UPDATE THIS WITH Variable threshould
                         valid_idx = (match_count > match_threshold) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
                         if valid_doc.any():
                             mask_label = -1 * torch.ones_like(input_ids)
-                            mask_label[valid_idx] = i
+                            mask_label[valid_idx] = mappingWordIndexClass[i]   #TODO probably add here conversion word to class
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
@@ -399,7 +400,7 @@ class LOTClassTrainer(object):
             print("Preparing self supervision for masked category prediction.")
             if not os.path.exists(self.temp_dir):
                 os.makedirs(self.temp_dir)
-            mp.spawn(self.prepare_mcp_dist, nprocs=self.world_size, args=(top_pred_num, match_threshold, loader_name))
+            mp.spawn(self.prepare_mcp_dist, nprocs=self.world_size, args=(top_pred_num, match_threshold, loader_name, self.mappingWordIndexClass))
             gather_res = []
             for f in os.listdir(self.temp_dir):
                 if f[-3:] == '.pt':
