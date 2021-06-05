@@ -29,7 +29,7 @@ def make_one_hot(y, label_to_index):
 def calculate_df_doc_freq(df):
     docfreq = {}
     docfreq["UNK"] = len(df)
-    for index, row in df.iterrows():
+    for index, row in enumerate(df):
         line = row["sentence"]
         words = line.strip().split()
         temp_set = set(words)
