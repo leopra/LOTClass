@@ -75,7 +75,7 @@ def create_word_index_maps(word_vec):
 def preprocess(df):
     print("Preprocessing data for Tf-Idf..")
     for index, row in enumerate(df):
-        if index % 100 == 0:
+        if index % 10000 == 0:
             print("Finished rows: " + str(index) + " out of " + str(len(df)))
         line = row
         words = line.strip().split()
