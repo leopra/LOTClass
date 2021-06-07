@@ -793,6 +793,7 @@ class LOTClassTrainer(object):
 
         label_docs_dict = get_label_docs_dict(df, label_term_dict, pred_labels)
 
+        print([len(x) for y,x in label_docs_dict.items()])
         word_vec = preprocess(df)
         word_to_index, index_to_word = create_word_index_maps(word_vec)
 
