@@ -816,6 +816,7 @@ class LOTClassTrainer(object):
             labelss = [x[1] for x in index_to_label.items()]
             num_seed_to_add=1
             for l, seeds in sorted(label_term_dict.items(), key=lambda x: x[0]):
+                f.write(index_to_label[l])
                 cc = 0
                 for w in seeds:
                     #exit if the correct number of seed is added
