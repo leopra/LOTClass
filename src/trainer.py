@@ -676,32 +676,27 @@ class LOTClassTrainer(object):
         for l in label_docs_dict:
             components[l] = {}
             docs = label_docs_dict[l]
-            docfreq_local = calculate_doc_freq(docs)
-            vect = CountVectorizer(tokenizer=lambda x: x.split())
-            X = vect.fit_transform(docs)
-            rel_freq = X.sum(axis=0) / len(docs)
-            rel_freq = np.asarray(rel_freq).reshape(-1)
-            names = vect.get_feature_names()
+            #TODO ADDED FIX
+            if len(docs) != 0:
+                docfreq_local = calculate_doc_freq(docs)
+                vect = CountVectorizer(tokenizer=lambda x: x.split())
+                X = vect.fit_transform(docs)
+                rel_freq = X.sum(axis=0) / len(docs)
+                rel_freq = np.asarray(rel_freq).reshape(-1)
+                names = vect.get_feature_names()
 
-            for i, name in enumerate(names):
-                try:
-                    if docfreq_local[name] < doc_freq_thresh:
+                for i, name in enumerate(names):
+                    try:
+                        if docfreq_local[name] < doc_freq_thresh:
+                            continue
+                    except:
                         continue
-                except:
-                    continue
-                #bad solution for words not appearing in the dictionary
-                try:
-                    word_to_index[name]
-                    docfreq_local[name]
-                    docfreq[name]
-                except:
-                    continue
-                E_LT[l][word_to_index[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[
-                    name] * np.tanh(rel_freq[i])
-                components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
-                                       "idf": inv_docfreq[name],
-                                       "rel_freq": np.tanh(rel_freq[i]),
-                                       "rank": E_LT[l][word_to_index[name]]}
+                    E_LT[l][word_to_index[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[
+                        name] * np.tanh(rel_freq[i])
+                    components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
+                                           "idf": inv_docfreq[name],
+                                           "rel_freq": np.tanh(rel_freq[i]),
+                                           "rank": E_LT[l][word_to_index[name]]}
         return E_LT, components
 
     def expand(self, E_LT, index_to_label, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
