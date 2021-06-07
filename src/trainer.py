@@ -450,6 +450,7 @@ class LOTClassTrainer(object):
                     mask_pos = labels >= 0
                     labels = labels[mask_pos]
                     # mask out category indicative words
+                    #TODO consider masking randomly
                     input_ids[mask_pos] = self.mask_id
                     logits = model(input_ids, 
                                    pred_mode="classification",
@@ -674,6 +675,7 @@ class LOTClassTrainer(object):
         for l in label_docs_dict:
             components[l] = {}
             docs = label_docs_dict[l]
+            print(docs[0])
             docfreq_local = calculate_doc_freq(docs)
             vect = CountVectorizer(tokenizer=lambda x: x.split())
             X = vect.fit_transform(docs)
@@ -760,6 +762,7 @@ class LOTClassTrainer(object):
         label_to_index = dict([(i,x) for (x,i) in index_to_label.items()])
 
         pred_label_file = os.path.join(self.dataset_dir, "pred_labels_train.pt")
+
         ##### PREDICTION AND EXPANSION
         if os.path.exists(pred_label_file):
             pred_labels = torch.load(pred_label_file)
@@ -776,7 +779,7 @@ class LOTClassTrainer(object):
 
         import random
         df = data['input_ids'].numpy()
-        df = [self.tokenizer.decode(doc) for doc in df] #TODO remove special tokens from output
+        df = [self.tokenizer.decode(doc) for doc in df] #TODO remove special tokens [mask] [CLS] [SEP] from output
 
         #FOR TESTING use random prediction as the 120k preds take a lot of time
         #pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(df))])
