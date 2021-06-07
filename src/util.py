@@ -74,15 +74,17 @@ def create_word_index_maps(word_vec):
 
 def preprocess(df):
     print("Preprocessing data for Tf-Idf..")
+    new_words = set()
+
     for index, row in enumerate(df):
         if index % 10000 == 0:
             print("Finished rows: " + str(index) + " out of " + str(len(df)))
         line = row
         words = line.strip().split()
-        new_words = []
+
         for word in words:
-            new_words.append(word)
-    return df, new_words
+            new_words.add(word)
+    return list(new_words)
 
 def get_label_docs_dict(df, label_term_dict, pred_labels):
     label_docs_dict = {}
