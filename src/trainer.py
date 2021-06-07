@@ -675,7 +675,7 @@ class LOTClassTrainer(object):
         for l in label_docs_dict:
             components[l] = {}
             docs = label_docs_dict[l]
-            print(docs[0])
+            print(label_docs_dict)
             docfreq_local = calculate_doc_freq(docs)
             vect = CountVectorizer(tokenizer=lambda x: x.split())
             X = vect.fit_transform(docs)
