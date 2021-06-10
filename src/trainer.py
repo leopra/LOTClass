@@ -665,7 +665,7 @@ class LOTClassTrainer(object):
         print(f"Writing prediction results to {out_file}")
         f_out = open(out_file, 'w')
         for label in pred_labels:
-            f_out.write(str(label.item()) + '\n')
+            f_out.write(str(label.numpy()) + '\n')
 
 
 
