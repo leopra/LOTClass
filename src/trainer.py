@@ -627,13 +627,13 @@ class LOTClassTrainer(object):
                     if return_type == "data":
                         all_input_ids.append(input_ids)
                         all_input_mask.append(input_mask)
-                        all_preds.append(nn.Softmax(dim=-1)(logits))
+                        all_preds.append(nn.Sigmoid()(logits)) #TODO changed this to sigmoid
                     elif return_type == "acc":
                         labels = batch[2]
                         pred_labels.append(torch.argmax(logits, dim=-1).cpu())
                         truth_labels.append(labels)
                     elif return_type == "pred":
-                        pred_labels.append(torch.argmax(logits, dim=-1).cpu())
+                        pred_labels.append((nn.Sigmoid()(logits) > 0.5).cpu())
             if return_type == "data":
                 all_input_ids = torch.cat(all_input_ids, dim=0)
                 all_input_mask = torch.cat(all_input_mask, dim=0)
