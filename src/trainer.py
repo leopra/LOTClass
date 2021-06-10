@@ -633,7 +633,7 @@ class LOTClassTrainer(object):
                         pred_labels.append(torch.argmax(logits, dim=-1).cpu())
                         truth_labels.append(labels)
                     elif return_type == "pred":
-                        pred_labels.append((nn.Sigmoid()(logits) > 0.5).cpu())
+                        pred_labels.append((nn.Sigmoid()(logits) > 0.5).cpu()) #TODO changed this to higher than 0.5
             if return_type == "data":
                 all_input_ids = torch.cat(all_input_ids, dim=0)
                 all_input_mask = torch.cat(all_input_mask, dim=0)
