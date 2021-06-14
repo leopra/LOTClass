@@ -1,5 +1,4 @@
 import numpy as np
-from keras.preprocessing.text import Tokenizer
 
 import nltk
 nltk.download('stopwords')
