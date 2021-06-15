@@ -473,7 +473,7 @@ class LOTClassTrainer(object):
 
                         #TODO added check for words counts
                         spacy_lemm = batch[2]
-                        print(spacy_lemm)
+                        print(self.label_name_dict_spacy)
                         X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(), self.label_name_dict_spacy)
                         print(y_cls)
                         # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
