@@ -347,8 +347,8 @@ class LOTClassTrainer(object):
     def make_dataloader(self, rank, data_dict, batch_size):
         if "labels" in data_dict:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
-        # if "tensor_spacy" in data_dict:
-        #     dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"])
+        if "tensor_spacy" in data_dict:
+            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"])
         else:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"])
         sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=rank)
@@ -472,7 +472,7 @@ class LOTClassTrainer(object):
                         valid_idx = (match_count > match_threshold) & (input_mask > 0)
 
                         #TODO added check for words counts
-                        spacy_lemm = batch[3]
+                        spacy_lemm = batch[2]
                         X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(), self.label_name_dict_spacy)
                         print(y_cls)
                         # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
