@@ -350,7 +350,7 @@ class LOTClassTrainer(object):
     # create dataset loader
     def make_dataloader(self, rank, data_dict, batch_size):
         if "labels" in data_dict:
-            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"], data_dict["spacy_lemm"])
+            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"], data_dict["tensor_spacy"])
         else:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"])
         sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=rank)
