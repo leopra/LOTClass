@@ -221,7 +221,7 @@ class LOTClassTrainer(object):
                 labels = torch.tensor(labels)
                 data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels, "tensor_spacy": tensor_spacy}
             else:
-                data = {"input_ids": input_ids, "attention_masks": attention_masks}
+                data = {"input_ids": input_ids, "attention_masks": attention_masks, "tensor_spacy": tensor_spacy}
             torch.save(data, loader_file)
 
         if find_label_name:
@@ -233,13 +233,6 @@ class LOTClassTrainer(object):
                 print(f"Reading texts from {os.path.join(dataset_dir, text_file)}")
                 corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
                 docs = [doc.strip() for doc in corpus.readlines()]
-
-                # TODO check if this works
-                spacy_encode = self.computeLemmSpacy(docs, 'spacy_lemm.txt')
-                print(len(docs))
-                tensor_spacy = torch.tensor(spacy_encode)
-                print(tensor_spacy.size())
-
                 print("Locating label names in the corpus.")
                 chunk_size = ceil(len(docs) / self.num_cpus)
                 chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
@@ -248,7 +241,7 @@ class LOTClassTrainer(object):
                 attention_masks_with_label_name = torch.cat([result[1] for result in results])
                 label_name_idx = torch.cat([result[2] for result in results])
                 assert len(input_ids_with_label_name) > 0, "No label names appear in corpus!"
-                label_name_data = {"input_ids": input_ids_with_label_name, "attention_masks": attention_masks_with_label_name, "labels": label_name_idx, "tensor_spacy": tensor_spacy}
+                label_name_data = {"input_ids": input_ids_with_label_name, "attention_masks": attention_masks_with_label_name, "labels": label_name_idx}
                 loader_file = os.path.join(dataset_dir, label_name_loader_name)
                 print(f"Saving texts with label names into {loader_file}")
                 torch.save(label_name_data, loader_file)
