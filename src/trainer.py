@@ -205,7 +205,7 @@ class LOTClassTrainer(object):
 
             # TODO check if this works
             spacy_encode = self.computeLemmSpacy(docs, 'spacy_lemm.txt')
-            tensor_spacy = torch.cat([torch.tensor(toks) for toks in spacy_encode])
+            tensor_spacy = torch.tensor(spacy_encode)
 
             print(f"Converting texts into tensors.")
             chunk_size = ceil(len(docs) / self.num_cpus)
@@ -235,7 +235,7 @@ class LOTClassTrainer(object):
 
                 # TODO check if this works
                 spacy_encode = self.computeLemmSpacy(docs, 'spacy_lemm.txt')
-                tensor_spacy = torch.cat([torch.tensor(toks) for toks in spacy_encode])
+                tensor_spacy = torch.tensor(spacy_encode)
 
                 print("Locating label names in the corpus.")
                 chunk_size = ceil(len(docs) / self.num_cpus)
