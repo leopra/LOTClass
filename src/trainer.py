@@ -66,14 +66,12 @@ class LOTClassTrainer(object):
         self.spacyIdx2Word = {}
         self.label_name_dict_spacy = {}
 
-    def computeLemmSpacy(self, dataset_dir, text_file, spacy_text_file):
-        loader_file = os.path.join(dataset_dir, spacy_text_file)
+    def computeLemmSpacy(self, docs, spacy_text_file):
+        loader_file = os.path.join(self.dataset_dir, spacy_text_file)
 
         # TODO could add check to skip calculation if file is saved
 
         nlp = spacy.load("en_core_web_sm")
-        corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
-        docs = [doc.strip() for doc in corpus.readlines()]
         lemmDocs = []
         max_len = 0
         for doc in nlp.pipe(docs, disable=["tok2vec","parser"]):
