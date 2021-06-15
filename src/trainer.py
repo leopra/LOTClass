@@ -21,8 +21,7 @@ from model import LOTClassModel
 import warnings
 warnings.filterwarnings("ignore")
 import string
-
-
+import spacy
 
 from util import *
 from sklearn.feature_extraction.text import CountVectorizer
@@ -63,6 +62,91 @@ class LOTClassTrainer(object):
         self.st_loss = nn.KLDivLoss(reduction='batchmean')
         self.update_interval = args.update_interval
         self.early_stop = args.early_stop
+        self.spacyWord2Idx = {}
+        self.spacyIdx2Word = {}
+        self.label_name_dict_spacy = {}
+
+    def computeLemmSpacy(self, dataset_dir, text_file, spacy_text_file):
+        loader_file = os.path.join(dataset_dir, spacy_text_file)
+
+        # TODO could add check to skip calculation if file is saved
+
+        nlp = spacy.load("en_core_web_sm")
+        corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
+        docs = [doc.strip() for doc in corpus.readlines()]
+        lemmDocs = []
+        max_len = 0
+        for doc in nlp.pipe(docs, disable=["tok2vec","parser"]):
+            # Do something with the doc here
+            if not doc.has_annotation("DEP"):
+                k = [n.lemma_ for n in doc]
+                lemmDocs.append(k)
+                if len(k) > max_len:
+                    max_len = len(k)
+            else:
+                lemmDocs.append(['[VUOTA]'])
+
+        vectorizer = CountVectorizer(analyzer=lambda x: x)
+        vectorizer.fit_transform(lemmDocs)  # sparse matrix with columns corresponding to words
+        words = {w:i for i,w in enumerate(vectorizer.get_feature_names())}
+        encodedText = np.full((len(lemmDocs),max_len),-1, dtype=int)
+
+        for j,doc in enumerate(lemmDocs):
+            for i, tok in enumerate(doc):
+                encodedText[j,i] = words[tok]
+        torch.save(encodedText, loader_file)
+
+        self.spacyWord2Idx = words
+        self.spacyIdx2Word = {x:i for i,x in words.items()}
+        self.label_name_dict_spacy = {i:[self.spacyWord2Idx[w] for w in words] for i,words in self.label_name_dict.items()}
+
+        return encodedText
+
+    def generate_pseudo_labels(self, df, labels, label_term_dict):
+        def argmax_label(count_dict):
+            maxi = 0
+            max_label = None
+            for l in count_dict:
+                count = 0
+                for t in count_dict[l]:
+                    count += count_dict[l][t]
+                if count > maxi:
+                    maxi = count
+                    max_label = l
+            return max_label
+
+        y = []
+        X = []
+        for index, tokens in enumerate(df):
+            words = tokens
+            count_dict = {}
+            flag = 0
+            for l in labels:
+                seed_words = set()
+                for w in label_term_dict[l]:
+                    seed_words.add(w)
+                int_labels = list(set(words).intersection(seed_words))
+                if len(int_labels) == 0:
+                    continue
+                for word in words:
+                    if word in int_labels:
+                        flag = 1
+                        try:
+                            temp = count_dict[l]
+                        except:
+                            count_dict[l] = {}
+                        try:
+                            count_dict[l][word] += 1
+                        except:
+                            count_dict[l][word] = 1
+            if flag:
+                lbl = argmax_label(count_dict)
+                if not lbl:
+                    y.append(-1)
+                else:
+                    y.append(lbl)
+                    X.append(tokens)
+        return X, y
 
     # set up distributed training
     def set_up_dist(self, rank):
@@ -93,7 +177,7 @@ class LOTClassTrainer(object):
                                                         return_attention_mask=True, truncation=True, return_tensors='pt')
         input_ids = encoded_dict['input_ids']
         attention_masks = encoded_dict['attention_mask']
-        return input_ids, attention_masks
+        return input_ids, attention_masks, spacy_encode
 
     # convert list of token ids to list of strings
     def decode(self, ids):
@@ -103,6 +187,7 @@ class LOTClassTrainer(object):
     # convert dataset into tensors
     def create_dataset(self, dataset_dir, text_file, label_file, loader_name, find_label_name=False, label_name_loader_name=None):
         loader_file = os.path.join(dataset_dir, loader_name)
+
         if os.path.exists(loader_file):
             print(f"Loading encoded texts from {loader_file}")
             data = torch.load(loader_file)
@@ -110,6 +195,11 @@ class LOTClassTrainer(object):
             print(f"Reading texts from {os.path.join(dataset_dir, text_file)}")
             corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
             docs = [doc.strip() for doc in corpus.readlines()]
+
+            # TODO check if this works
+            spacy_encode = self.computeLemmSpacy(docs, 'spacy_lemm.txt')
+            tensor_spacy = torch.cat([torch.tensor(toks) for toks in spacy_encode])
+
             print(f"Converting texts into tensors.")
             chunk_size = ceil(len(docs) / self.num_cpus)
             chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
@@ -122,7 +212,7 @@ class LOTClassTrainer(object):
                 truth = open(os.path.join(dataset_dir, label_file))
                 labels = [int(label.strip()) for label in truth.readlines()]
                 labels = torch.tensor(labels)
-                data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels}
+                data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels, "tensor_spacy": tensor_spacy}
             else:
                 data = {"input_ids": input_ids, "attention_masks": attention_masks}
             torch.save(data, loader_file)
@@ -135,6 +225,11 @@ class LOTClassTrainer(object):
                 print(f"Reading texts from {os.path.join(dataset_dir, text_file)}")
                 corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
                 docs = [doc.strip() for doc in corpus.readlines()]
+
+                # TODO check if this works
+                spacy_encode = self.computeLemmSpacy(docs, 'spacy_lemm.txt')
+                tensor_spacy = torch.cat([torch.tensor(toks) for toks in spacy_encode])
+
                 print("Locating label names in the corpus.")
                 chunk_size = ceil(len(docs) / self.num_cpus)
                 chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
@@ -143,7 +238,7 @@ class LOTClassTrainer(object):
                 attention_masks_with_label_name = torch.cat([result[1] for result in results])
                 label_name_idx = torch.cat([result[2] for result in results])
                 assert len(input_ids_with_label_name) > 0, "No label names appear in corpus!"
-                label_name_data = {"input_ids": input_ids_with_label_name, "attention_masks": attention_masks_with_label_name, "labels": label_name_idx}
+                label_name_data = {"input_ids": input_ids_with_label_name, "attention_masks": attention_masks_with_label_name, "labels": label_name_idx, "tensor_spacy": tensor_spacy}
                 loader_file = os.path.join(dataset_dir, label_name_loader_name)
                 print(f"Saving texts with label names into {loader_file}")
                 torch.save(label_name_data, loader_file)
@@ -248,7 +343,7 @@ class LOTClassTrainer(object):
     # create dataset loader
     def make_dataloader(self, rank, data_dict, batch_size):
         if "labels" in data_dict:
-            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
+            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"], data_dict["spacy_lemm"])
         else:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"])
         sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=rank)
@@ -365,17 +460,26 @@ class LOTClassTrainer(object):
                         k = 1
                         if i in strictThreshClass:
                             k = 2
-
                         match_idx = torch.zeros_like(sorted_res).bool()
                         for word_id in category_vocab:
                             match_idx = (sorted_res == word_id) | match_idx #TODO what is going on here
                         match_count = torch.sum(match_idx.int(), dim=-1)
                         valid_idx = (match_count > match_threshold) & (input_mask > 0)
+
+                        #TODO added check for words counts
+                        spacy_lemm = batch[3]
+                        X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(), self.label_name_dict_spacy)
+                        print(y_cls)
                         # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
+
                         if valid_doc.any():
                             mask_label = -1 * torch.ones_like(input_ids)
-                            mask_label[valid_idx] = self.mappingWordIndexClass[i]   #TODO probably add here conversion word to class
+                            mask_label[valid_idx] = self.mappingWordIndexClass[i] #TODO probably add here conversion word to class
+
+                            print(mask_label[:, 0, :])
+
+                            mask_label[:,0,:] = y_cls   #TODO this is never working lol
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
