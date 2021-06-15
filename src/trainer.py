@@ -76,12 +76,12 @@ class LOTClassTrainer(object):
         max_len = 0
         for doc in nlp.pipe(docs, disable=["tok2vec","parser"]):
             # Do something with the doc here
-            if not doc.has_annotation("DEP"):
+            try:
                 k = [n.lemma_ for n in doc]
                 lemmDocs.append(k)
                 if len(k) > max_len:
                     max_len = len(k)
-            else:
+            except:
                 lemmDocs.append(['[VUOTA]'])
 
         vectorizer = CountVectorizer(analyzer=lambda x: x)
