@@ -184,7 +184,7 @@ class LOTClassTrainer(object):
                                                         return_attention_mask=True, truncation=True, return_tensors='pt')
         input_ids = encoded_dict['input_ids']
         attention_masks = encoded_dict['attention_mask']
-        return input_ids, attention_masks, spacy_encode
+        return input_ids, attention_masks
 
     # convert list of token ids to list of strings
     def decode(self, ids):
