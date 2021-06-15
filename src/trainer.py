@@ -96,7 +96,16 @@ class LOTClassTrainer(object):
 
         self.spacyWord2Idx = words
         self.spacyIdx2Word = {x:i for i,x in words.items()}
-        self.label_name_dict_spacy = {i:[self.spacyWord2Idx[w] for w in words] for i,words in self.label_name_dict.items()}
+
+        encoded_dict = {i:[] for i in self.label_name_dict.keys()}
+        for k,values in self.label_name_dict.items():
+            for v in values:
+                try:
+                    encoded_dict[i].append(self.spacyWord2Idx[w])
+                except:
+                    continue
+
+        self.label_name_dict_spacy = encoded_dict
 
         return encodedText
 
