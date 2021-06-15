@@ -445,7 +445,7 @@ class LOTClassTrainer(object):
     # prepare self supervision for masked category prediction (distributed function)
     def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt", strictThreshClass = []):
         if len(self.label_name_dict_spacy.keys()) == 0:
-        self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(os.path.join(self.dataset_dir, 'spacy_data.pt'))
+            self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(os.path.join(self.dataset_dir, 'spacy_data.pt'))
         model = self.set_up_dist(rank)
         model.eval()
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
