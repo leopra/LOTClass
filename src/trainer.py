@@ -346,7 +346,6 @@ class LOTClassTrainer(object):
 
     # create dataset loader
     def make_dataloader(self, rank, data_dict, batch_size):
-        print(data_dict.keys())
         if "labels" in data_dict:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
 
@@ -398,7 +397,6 @@ class LOTClassTrainer(object):
         wrap_label_name_dataset_loader = tqdm(label_name_dataset_loader) if rank == 0 else label_name_dataset_loader
         try:
             for batch in wrap_label_name_dataset_loader:
-                print(batch)
                 with torch.no_grad():
                     input_ids = batch[0].to(rank)
                     input_mask = batch[1].to(rank)
