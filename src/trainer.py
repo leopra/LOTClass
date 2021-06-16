@@ -395,6 +395,7 @@ class LOTClassTrainer(object):
         wrap_label_name_dataset_loader = tqdm(label_name_dataset_loader) if rank == 0 else label_name_dataset_loader
         try:
             for batch in wrap_label_name_dataset_loader:
+                    print(batch)
                 with torch.no_grad():
                     input_ids = batch[0].to(rank)
                     input_mask = batch[1].to(rank)
