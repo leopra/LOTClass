@@ -102,7 +102,8 @@ class LOTClassTrainer(object):
             for v in values:
                 try:
                     encoded_dict[i].append(self.spacyWord2Idx[v])
-                except:
+                except Exception as e:
+                    print(e, v)
                     continue
 
         self.label_name_dict_spacy = encoded_dict
