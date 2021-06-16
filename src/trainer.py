@@ -101,7 +101,7 @@ class LOTClassTrainer(object):
         for k,values in self.label_name_dict.items():
             for v in values:
                 try:
-                    encoded_dict[i].append(self.spacyWord2Idx[w])
+                    encoded_dict[i].append(self.spacyWord2Idx[v])
                 except:
                     continue
 
