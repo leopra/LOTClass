@@ -346,12 +346,14 @@ class LOTClassTrainer(object):
 
     # create dataset loader
     def make_dataloader(self, rank, data_dict, batch_size):
+        print(data_dict.keys())
         if "labels" in data_dict:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
         if "tensor_spacy" in data_dict and "labels" not in data_dict:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"])
         else:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"])
+
         sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=rank)
         dataset_loader = DataLoader(dataset, sampler=sampler, batch_size=batch_size, shuffle=False)
         return dataset_loader
