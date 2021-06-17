@@ -129,7 +129,6 @@ class LOTClassTrainer(object):
         X = []
         for index, tokens in enumerate(df):
             words = tokens
-            print(tokens)
             count_dict = {}
             flag = 0
             for l in labels:
@@ -137,7 +136,6 @@ class LOTClassTrainer(object):
                 for w in label_term_dict[l]:
                     seed_words.add(w)
                 int_labels = list(set(words).intersection(seed_words))
-                print('intersezione', int_labels)
                 if len(int_labels) == 0:
                     continue
                 for word in words:
@@ -492,9 +490,9 @@ class LOTClassTrainer(object):
                             mask_label = -1 * torch.ones_like(input_ids)
                             mask_label[valid_idx] = self.mappingWordIndexClass[i] #TODO probably add here conversion word to class
 
-                            print(mask_label[:, 0, :])
+                            print(mask_label[:, 0])
 
-                            mask_label[:,0,:] = y_cls   #TODO this is never working lol
+                            mask_label[:,0] = y_cls   #TODO this is never working lol
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
