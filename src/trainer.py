@@ -158,8 +158,8 @@ class LOTClassTrainer(object):
                     X.append(tokens)
             else:
                 y.append(-1)
-        print('found:')
-        print([(x,y) for x,y in list(zip(X,y)) if y != -1])
+        if (np.array(y) != -1).any:
+            print([(x,y) for x,y in list(zip(X,y)) if y != -1])
         return X, y
 
     # set up distributed training
