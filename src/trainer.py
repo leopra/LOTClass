@@ -158,7 +158,8 @@ class LOTClassTrainer(object):
                     X.append(tokens)
             else:
                 y.append(-1)
-        print(len(y))
+        print('found:')
+        print([(x,y) for x,y in list(zip(X,y)) if y != -1])
         return X, y
 
     # set up distributed training
@@ -483,9 +484,8 @@ class LOTClassTrainer(object):
 
                         #TODO added check for words counts
                         spacy_lemm = batch[2]
-                        print(self.label_name_dict_spacy)
+                        #print(self.label_name_dict_spacy)
                         X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(), self.label_name_dict_spacy)
-                        print('y_cls', y_cls)
                         # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
 
@@ -493,9 +493,9 @@ class LOTClassTrainer(object):
                             mask_label = -1 * torch.ones_like(input_ids)
                             mask_label[valid_idx] = self.mappingWordIndexClass[i] #TODO probably add here conversion word to class
 
-                            print(mask_label[:, 0])
+                            #print(mask_label[:, 0])
 
-                            mask_label[:,0] = torch.tensor(y_cls)   #TODO this is never working lol
+                            mask_label[:,0] = torch.tensor(y_cls)
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
