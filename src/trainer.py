@@ -460,6 +460,7 @@ class LOTClassTrainer(object):
         all_input_ids = []
         all_mask_label = []
         all_input_mask = []
+        all_spacy_lemm = []
         category_doc_num = defaultdict(int)
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
         try:
@@ -482,10 +483,7 @@ class LOTClassTrainer(object):
                         match_count = torch.sum(match_idx.int(), dim=-1)
                         valid_idx = (match_count > match_threshold) & (input_mask > 0)
 
-                        #TODO added check for words counts
                         spacy_lemm = batch[2]
-                        #print(self.label_name_dict_spacy)
-                        X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(), self.label_name_dict_spacy)
                         # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
 
@@ -493,12 +491,10 @@ class LOTClassTrainer(object):
                             mask_label = -1 * torch.ones_like(input_ids)
                             mask_label[valid_idx] = self.mappingWordIndexClass[i] #TODO probably add here conversion word to class
 
-                            #print(mask_label[:, 0])
-
-                            mask_label[:,0] = torch.tensor(y_cls)
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
+                            all_spacy_lemm.append(spacy_lemm)
                             category_doc_num[i] += valid_doc.int().sum().item()
             all_input_ids = torch.cat(all_input_ids, dim=0)
             all_mask_label = torch.cat(all_mask_label, dim=0)
@@ -548,6 +544,88 @@ class LOTClassTrainer(object):
                 assert category_doc_num[i] > 10, f"Too few ({category_doc_num[i]}) documents with category indicative terms found for category {i}; " \
                        "try to add more unlabeled documents to the training corpus (recommend) or reduce `--match_threshold` (not recommend)"
         print(f"There are totally {len(self.mcp_data['input_ids'])} documents with category indicative terms.")
+
+    # prepare self supervision for masked category prediction (distributed function) using the argmax of seedwords wordcount
+    def prepare_mcp_word_count_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train_tf.pt",
+                         strictThreshClass=[]):
+        if len(self.label_name_dict_spacy.keys()) == 0:
+            self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(
+                os.path.join(self.dataset_dir, 'spacy_data.pt'))
+
+        train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
+        all_input_ids = []
+        all_mask_label = []
+        all_input_mask = []
+        category_doc_num = defaultdict(int)
+        wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
+        for batch in wrap_train_dataset_loader:
+            input_ids = batch[0]
+            input_mask = batch[1]
+            mask_label = batch[2] #TODO this should be the labels created by prepare_mcp_dist
+
+            # TODO added check for words counts
+            spacy_lemm = batch[3]
+            # print(self.label_name_dict_spacy)
+            X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(),
+                                                   self.label_name_dict_spacy)
+
+            #add prediction token [CLS] to the class found or keep -1
+            mask_label[:, 0] = torch.tensor(y_cls)
+            all_input_ids.append(input_ids)
+            all_mask_label.append(mask_label)
+            all_input_mask.append(input_mask)
+            category_doc_num[0] += 0 #TODO add this count feature
+        all_input_ids = torch.cat(all_input_ids, dim=0)
+        all_mask_label = torch.cat(all_mask_label, dim=0)
+        all_input_mask = torch.cat(all_input_mask, dim=0)
+        save_dict = {
+            "all_input_ids": all_input_ids,
+            "all_mask_label": all_mask_label,
+            "all_input_mask": all_input_mask,
+            "category_doc_num": category_doc_num,
+        }
+        save_file = os.path.join(self.temp_dir, f"{rank}_" + loader_name)
+        torch.save(save_dict, save_file)
+
+
+    # prepare self supervision on [CLS[ token prediction using the argmax of seedwords wordcount
+    def prepare_mcp_word_count(self, top_pred_num=50, match_threshold=20, loader_name="mcp_train_tf.pt"):
+        loader_file = os.path.join(self.dataset_dir, loader_name)
+        if os.path.exists(loader_file):
+            print(f"Loading masked category prediction data from {loader_file}")
+            self.mcp_data = torch.load(loader_file)
+        else:
+            loader_file = os.path.join(self.dataset_dir, loader_name)
+            print("Preparing labels from word count.")
+            if not os.path.exists(self.temp_dir):
+                os.makedirs(self.temp_dir)
+            mp.spawn(self.prepare_mcp_word_count_dist, nprocs=self.world_size,
+                     args=(loader_name))
+            gather_res = []
+            for f in os.listdir(self.temp_dir):
+                if f[-3:] == '.pt':
+                    gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
+            assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
+            all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
+            all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
+            all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
+            category_doc_num = {i: 0 for i in range(self.num_class)}
+            for i in category_doc_num:
+                for res in gather_res:
+                    if i in res["category_doc_num"]:
+                        category_doc_num[i] += res["category_doc_num"][i]
+            print(
+                f"Number of documents with category indicative word count found for each category is: {category_doc_num}")
+            self.mcp_data = {"input_ids": all_input_ids, "attention_masks": all_input_mask,
+                             "labels": all_mask_label}
+            torch.save(self.mcp_data, loader_file)
+            if os.path.exists(self.temp_dir):
+                shutil.rmtree(self.temp_dir)
+            for i in category_doc_num:
+                assert category_doc_num[
+                           i] > 10, f"Too few ({category_doc_num[i]}) documents with word count indicative terms found for category {i}; " \
+                                    "try to add more unlabeled documents to the training corpus (recommend) or reduce `--match_threshold` (not recommend)"
+        print(f"There are totally {len(self.mcp_data['input_ids'])} documents with category indicative terms by word count.")
 
     # masked category prediction (distributed function)
     def mcp_dist(self, rank, epochs=5, loader_name="mcp_model.pt"):
