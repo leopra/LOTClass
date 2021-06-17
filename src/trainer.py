@@ -482,7 +482,7 @@ class LOTClassTrainer(object):
                         spacy_lemm = batch[2]
                         print(self.label_name_dict_spacy)
                         X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(), self.label_name_dict_spacy)
-                        print(y_cls)
+                        print('y_cls', y_cls)
                         # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
 
@@ -492,7 +492,7 @@ class LOTClassTrainer(object):
 
                             print(mask_label[:, 0])
 
-                            mask_label[:,0] = y_cls   #TODO this is never working lol
+                            mask_label[:,0] = torch.tensor(y_cls)   #TODO this is never working lol
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
