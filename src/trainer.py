@@ -156,6 +156,9 @@ class LOTClassTrainer(object):
                 else:
                     y.append(lbl)
                     X.append(tokens)
+            else:
+                y.append(-1)
+        print(len(y))
         return X, y
 
     # set up distributed training
