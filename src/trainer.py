@@ -113,6 +113,7 @@ class LOTClassTrainer(object):
 
     def generate_pseudo_labels(self, df, labels, label_term_dict):
         def argmax_label(count_dict):
+            print(count_dict)
             maxi = 0
             max_label = None
             for l in count_dict:
@@ -128,6 +129,7 @@ class LOTClassTrainer(object):
         X = []
         for index, tokens in enumerate(df):
             words = tokens
+            print(tokens)
             count_dict = {}
             flag = 0
             for l in labels:
@@ -135,6 +137,7 @@ class LOTClassTrainer(object):
                 for w in label_term_dict[l]:
                     seed_words.add(w)
                 int_labels = list(set(words).intersection(seed_words))
+                print('intersezione', int_labels)
                 if len(int_labels) == 0:
                     continue
                 for word in words:
