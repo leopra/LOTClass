@@ -504,8 +504,10 @@ class LOTClassTrainer(object):
                             category_doc_num[i] += valid_doc.int().sum().item()
 
                         if non_valid_doc.any():
+                            mask_label_ = -1 * torch.ones_like(input_ids)
+
                             all_input_ids_.append(input_ids[valid_doc].cpu())
-                            all_mask_label_.append(mask_label[valid_doc].cpu())
+                            all_mask_label_.append(mask_label_[valid_doc].cpu())
                             all_input_mask_.append(input_mask[valid_doc].cpu())
                             all_spacy_lemm_.append(spacy_lemm)
 
