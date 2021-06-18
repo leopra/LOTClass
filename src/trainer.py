@@ -452,8 +452,7 @@ class LOTClassTrainer(object):
 
     # prepare self supervision for masked category prediction (distributed function)
     def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt", strictThreshClass = []):
-        if len(self.label_name_dict_spacy.keys()) == 0:
-            self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(os.path.join(self.dataset_dir, 'spacy_data.pt'))
+
         model = self.set_up_dist(rank)
         model.eval()
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
@@ -545,6 +544,7 @@ class LOTClassTrainer(object):
 
     # prepare self supervision for masked category prediction
     def prepare_mcp(self, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt"):
+
         loader_file = os.path.join(self.dataset_dir, loader_name)
         if os.path.exists(loader_file):
             print(f"Loading masked category prediction data from {loader_file}")
@@ -595,16 +595,14 @@ class LOTClassTrainer(object):
 
             self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "labels": all_mask_label, "spacy_lemm": all_spacy_lemm}
             torch.save(self.mcp_data_tf, 'mcp_train_tf.pt')
-            if os.path.exists(self.temp_dir):
-                shutil.rmtree(self.temp_dir)
+            # if os.path.exists(self.temp_dir):
+            #     shutil.rmtree(self.temp_dir)
+            #TODO do not delete as the data is used by word count function
 
         print(f"There are totally {len(self.mcp_data['input_ids'])} documents with category indicative terms.")
 
     # prepare self supervision for masked category prediction (distributed function) using the argmax of seedwords wordcount
     def prepare_mcp_word_count_dist(self, rank, loader_name="mcp_train_tf.pt"):
-        if len(self.label_name_dict_spacy.keys()) == 0:
-            self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(
-                os.path.join(self.dataset_dir, 'spacy_data.pt'))
 
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
         all_input_ids = []
@@ -644,7 +642,12 @@ class LOTClassTrainer(object):
 
     # prepare self supervision on [CLS[ token prediction using the argmax of seedwords wordcount
     def prepare_mcp_word_count(self, loader_name="mcp_train_tf.pt"):
+        if len(self.label_name_dict_spacy.keys()) == 0:
+            self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(
+                os.path.join(self.dataset_dir, 'spacy_data.pt'))
+
         loader_file = os.path.join(self.dataset_dir, loader_name)
+
         if os.path.exists(loader_file):
             print(f"Loading masked category prediction data from {loader_file}")
             self.mcp_data = torch.load(loader_file)
@@ -670,15 +673,13 @@ class LOTClassTrainer(object):
                         category_doc_num[i] += res["category_doc_num"][i]
             print(
                 f"Number of documents with category indicative word count found for each category is: {category_doc_num}")
-            self.mcp_data = {"input_ids": all_input_ids, "attention_masks": all_input_mask,
+            self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask,
                              "labels": all_mask_label}
-            torch.save(self.mcp_data, loader_file)
+
+            torch.save(self.mcp_data_tf, loader_file)
             if os.path.exists(self.temp_dir):
                 shutil.rmtree(self.temp_dir)
-            for i in category_doc_num:
-                assert category_doc_num[
-                           i] > 10, f"Too few ({category_doc_num[i]}) documents with word count indicative terms found for category {i}; " \
-                                    "try to add more unlabeled documents to the training corpus (recommend) or reduce `--match_threshold` (not recommend)"
+
         print(f"There are totally {len(self.mcp_data['input_ids'])} documents with category indicative terms by word count.")
 
     # masked category prediction (distributed function)
@@ -736,6 +737,9 @@ class LOTClassTrainer(object):
         loader_file = os.path.join(self.dataset_dir, loader_name)
         if os.path.exists(loader_file):
             print(f"\nLoading model trained via masked category prediction from {loader_file}")
+            print("Creating Labels by Word Count}")
+            self.prepare_mcp_word_count()
+
         else:
             self.prepare_mcp(top_pred_num, match_threshold)
             print(f"\nTraining model via masked category prediction.")
