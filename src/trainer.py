@@ -585,7 +585,7 @@ class LOTClassTrainer(object):
         for f in os.listdir(self.temp_dir):
             if f[-3:] == '.tft':
                 gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
-        assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
+        #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
         all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
         all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
         all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
@@ -597,8 +597,7 @@ class LOTClassTrainer(object):
             shutil.rmtree(self.temp_dir)
 
     # prepare self supervision for masked category prediction (distributed function) using the argmax of seedwords wordcount
-    def prepare_mcp_word_count_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train_tf.pt",
-                         strictThreshClass=[]):
+    def prepare_mcp_word_count_dist(self, rank, loader_name="mcp_train_tf.pt"):
         if len(self.label_name_dict_spacy.keys()) == 0:
             self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(
                 os.path.join(self.dataset_dir, 'spacy_data.pt'))
@@ -654,7 +653,7 @@ class LOTClassTrainer(object):
                      args=(loader_name))
             gather_res = []
             for f in os.listdir(self.temp_dir):
-                if f[-3:] == '.pt':
+                if f[-3:] == '.tft':
                     gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
             assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
             all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
