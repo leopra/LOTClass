@@ -557,7 +557,6 @@ class LOTClassTrainer(object):
             mp.spawn(self.prepare_mcp_dist, nprocs=self.world_size, args=(top_pred_num, match_threshold, loader_name))
             gather_res = []
 
-            print(os.listdir(self.temp_dir))
             for f in os.listdir(self.temp_dir):
                 if f[-3:] == '.pt':
                     gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
@@ -579,22 +578,27 @@ class LOTClassTrainer(object):
             for i in category_doc_num:
                 assert category_doc_num[i] > 10, f"Too few ({category_doc_num[i]}) documents with category indicative terms found for category {i}; " \
                        "try to add more unlabeled documents to the training corpus (recommend) or reduce `--match_threshold` (not recommend)"
+
+            gather_res = []
+            for f in os.listdir(self.temp_dir):
+                if f[-3:] == '.tft':
+                    print(f)
+                    gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
+
+            print(os.listdir(self.temp_dir))
+
+            #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
+            all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
+            all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
+            all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
+            all_spacy_lemm = torch.cat([res["all_spacy_lemm"] for res in gather_res], dim=0)
+
+            self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "labels": all_mask_label, "spacy_lemm": all_spacy_lemm}
+            torch.save(self.mcp_data_tf, 'mcp_train_tf.pt')
+            if os.path.exists(self.temp_dir):
+                shutil.rmtree(self.temp_dir)
+
         print(f"There are totally {len(self.mcp_data['input_ids'])} documents with category indicative terms.")
-
-        gather_res = []
-        for f in os.listdir(self.temp_dir):
-            if f[-3:] == '.tft':
-                gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
-        #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
-        all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
-        all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
-        all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
-        all_spacy_lemm = torch.cat([res["all_spacy_lemm"] for res in gather_res], dim=0)
-
-        self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "labels": all_mask_label, "spacy_lemm": all_spacy_lemm}
-        torch.save(self.mcp_data_tf, 'mcp_train_tf.pt')
-        if os.path.exists(self.temp_dir):
-            shutil.rmtree(self.temp_dir)
 
     # prepare self supervision for masked category prediction (distributed function) using the argmax of seedwords wordcount
     def prepare_mcp_word_count_dist(self, rank, loader_name="mcp_train_tf.pt"):
@@ -639,7 +643,7 @@ class LOTClassTrainer(object):
 
 
     # prepare self supervision on [CLS[ token prediction using the argmax of seedwords wordcount
-    def prepare_mcp_word_count(self, top_pred_num=50, match_threshold=20, loader_name="mcp_train_tf.pt"):
+    def prepare_mcp_word_count(self, loader_name="mcp_train_tf.pt"):
         loader_file = os.path.join(self.dataset_dir, loader_name)
         if os.path.exists(loader_file):
             print(f"Loading masked category prediction data from {loader_file}")
