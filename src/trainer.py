@@ -504,8 +504,6 @@ class LOTClassTrainer(object):
                             all_reference.append(reference[valid_doc])
                             category_doc_num[i] += valid_doc.int().sum().item()
 
-                            print("allref", all_reference)
-
             all_input_ids = torch.cat(all_input_ids, dim=0)
             all_mask_label = torch.cat(all_mask_label, dim=0)
             all_input_mask = torch.cat(all_input_mask, dim=0)
