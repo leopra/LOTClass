@@ -404,7 +404,7 @@ class LOTClassTrainer(object):
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"], data_dict["reference"])
         else:
             if "labels" in data_dict:
-                dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"], data_dict["reference"])
+                dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
 
             elif "tensor_spacy" in data_dict and "labels" not in data_dict: #TODO messy code, condition should be more clear
                 dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["reference"])
