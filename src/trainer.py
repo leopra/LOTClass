@@ -357,7 +357,7 @@ class LOTClassTrainer(object):
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"], data_dict["reference"])
         else:
             if "labels" in data_dict:
-                dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
+                dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"], data_dict["reference"])
 
             elif "tensor_spacy" in data_dict and "labels" not in data_dict: #TODO messy code, condition should be more clear
                 dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["reference"])
@@ -471,8 +471,8 @@ class LOTClassTrainer(object):
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
         try:
             for batch in wrap_train_dataset_loader:
-                print('batchid', batch[0])
-                print('batchref', batch[2])
+                print('batchid', batch[0].size())
+                print('batchref', batch[2].size())
                 with torch.no_grad():
                     input_ids = batch[0].to(rank)
                     input_mask = batch[1].to(rank)
