@@ -540,7 +540,7 @@ class LOTClassTrainer(object):
             for f in os.listdir(self.temp_dir):
                 if f[-3:] == '.pt':
                     gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
-            #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
+            #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!" #TODO put back
             all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
             all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
             all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
@@ -560,9 +560,9 @@ class LOTClassTrainer(object):
                        "try to add more unlabeled documents to the training corpus (recommend) or reduce `--match_threshold` (not recommend)"
 
 
-
-            self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "labels": all_mask_label, "spacy_lemm": all_spacy_lemm}
-            torch.save(self.mcp_data_tf, 'mcp_train_tf.pt')
+            print(all_reference)
+            self.mcp_used_data = all_reference
+            torch.save(self.mcp_used_data, 'mcp_train_tf.pt')
 
             if os.path.exists(self.temp_dir):
                 shutil.rmtree(self.temp_dir)
