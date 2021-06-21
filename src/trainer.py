@@ -507,13 +507,11 @@ class LOTClassTrainer(object):
             all_input_ids = torch.cat(all_input_ids, dim=0)
             all_mask_label = torch.cat(all_mask_label, dim=0)
             all_input_mask = torch.cat(all_input_mask, dim=0)
-            all_spacy_lemm = torch.cat(all_spacy_lemm, dim=0)
             #all_reference = torch.cat(all_reference, dim=0)
             save_dict = {
                 "all_input_ids": all_input_ids,
                 "all_mask_label": all_mask_label,
                 "all_input_mask": all_input_mask,
-                "all_spacy_lemm": all_spacy_lemm,
                 #"all_reference": all_reference,
                 "category_doc_num": category_doc_num,
             }
