@@ -112,11 +112,9 @@ class LOTClassTrainer(object):
         return encodedText
 
     def generate_pseudo_labels(self, df, labels, label_term_dict):
-        print(df)
-        print(labels)
-        print(label_term_dict)
+
         def argmax_label(count_dict):
-            print(count_dict)
+            print('count', count_dict)
             maxi = 0
             max_label = None
             for l in count_dict:
@@ -134,7 +132,7 @@ class LOTClassTrainer(object):
             words = tokens
             count_dict = {}
             flag = 0
-            for l in labels:
+            for l in list(labels):
                 seed_words = set()
                 for w in label_term_dict[l]:
                     seed_words.add(w)
@@ -266,19 +264,18 @@ class LOTClassTrainer(object):
         label_idx = -1 * torch.ones(self.max_len, dtype=torch.long)
         new_doc = []
         wordpcs = []
-        idx = 1 # index starts at 1 due to [CLS] token
+        idx = 1  # index starts at 1 due to [CLS] token
         for i, wordpc in enumerate(doc):
             wordpcs.append(wordpc[2:] if wordpc.startswith("##") else wordpc)
-            if idx >= self.max_len - 1: # last index will be [SEP] token
+            if idx >= self.max_len - 1:  # last index will be [SEP] token
                 break
-            if i == len(doc) - 1 or not doc[i+1].startswith("##"):
+            if i == len(doc) - 1 or not doc[i + 1].startswith("##"):
                 word = ''.join(wordpcs)
-                #CHANGE label2class to mapping
-                if word in self.mappingWord2Index:
-                    label_idx[idx] = self.mappingWord2Index[word]
+                if word in self.label2class:
+                    label_idx[idx] = self.label2class[word]
                     # replace label names that are not in tokenizer's vocabulary with the [MASK] token
-                    if word not in self.vocab:
-                        wordpcs = [self.tokenizer.mask_token]
+                    # if word not in self.vocab:
+                    #     wordpcs = [self.tokenizer.mask_token] #TODO i need to not filter words but what happens?
                 new_word = ''.join(wordpcs)
                 if new_word != self.tokenizer.unk_token:
                     idx += len(wordpcs)
@@ -288,6 +285,35 @@ class LOTClassTrainer(object):
             return ' '.join(new_doc), label_idx
         else:
             return None
+
+        #TODO multi vocabulary version
+
+        # doc = self.tokenizer.tokenize(doc)
+        # label_idx = -1 * torch.ones(self.max_len, dtype=torch.long)
+        # new_doc = []
+        # wordpcs = []
+        # idx = 1 # index starts at 1 due to [CLS] token
+        # for i, wordpc in enumerate(doc):
+        #     wordpcs.append(wordpc[2:] if wordpc.startswith("##") else wordpc)
+        #     if idx >= self.max_len - 1: # last index will be [SEP] token
+        #         break
+        #     if i == len(doc) - 1 or not doc[i+1].startswith("##"):
+        #         word = ''.join(wordpcs)
+        #         #CHANGE label2class to mapping
+        #         if word in self.mappingWord2Index:
+        #             label_idx[idx] = self.mappingWord2Index[word]
+        #             # replace label names that are not in tokenizer's vocabulary with the [MASK] token
+        #             if word not in self.vocab:
+        #                 wordpcs = [self.tokenizer.mask_token]
+        #         new_word = ''.join(wordpcs)
+        #         if new_word != self.tokenizer.unk_token:
+        #             idx += len(wordpcs)
+        #             new_doc.append(new_word)
+        #         wordpcs = []
+        # if (label_idx >= 0).any():
+        #     return ' '.join(new_doc), label_idx
+        # else:
+        #     return None
 
     # find label name occurrences in the corpus
     def label_name_occurrence(self, docs):
@@ -299,7 +325,7 @@ class LOTClassTrainer(object):
                 text_with_label.append(result[0])
                 label_name_idx.append(result[1].unsqueeze(0))
         if len(text_with_label) > 0:
-            encoded_dict = self.tokenizer.batch_encode_plus(text_with_label, add_special_tokens=True, max_length=self.max_len, 
+            encoded_dict = self.tokenizer.batch_encode_plus(text_with_label, add_special_tokens=True, max_length=self.max_len,
                                                             padding='max_length', return_attention_mask=True, truncation=True, return_tensors='pt')
             input_ids_with_label_name = encoded_dict['input_ids']
             attention_masks_with_label_name = encoded_dict['attention_mask']
@@ -319,40 +345,58 @@ class LOTClassTrainer(object):
             self.test_data = self.create_dataset(dataset_dir, test_file, test_label_file, "test.pt")
 
     # read label names from file
-    def read_label_names(self, dataset_dir, label_name_file, extended_dict):
-        ext_dict = os.path.join(self.dataset_dir, extended_dict)
-        if os.path.exists(ext_dict):
-            print(f"Loading extended category labels {ext_dict}")
-            label_name_file = open(ext_dict)
-        else:
-            label_name_file = open(os.path.join(dataset_dir, label_name_file))
+    def read_label_names(self, dataset_dir, label_name_file):
+        label_name_file = open(os.path.join(dataset_dir, label_name_file))
         label_names = label_name_file.readlines()
         self.label_name_dict = {i: [word.lower() for word in category_words.strip().split()] for i, category_words in enumerate(label_names)}
-
-        self.mappingWordIndexClass = {}
-        self.mappingWord2Index = {}
-        wordCounter = 0
-        for i, words in self.label_name_dict.items():
-            for word in words:
-                self.mappingWord2Index[word] = wordCounter
-                self.mappingWordIndexClass[wordCounter] = i
-                wordCounter += 1
-
-
-        #dictionary added to train multiple dictionaries for the same class
-        self.indextoken2class = {i: [word.lower() for word in category_words.strip().split()] for i, category_words in enumerate(label_names)}
         print(f"Label names used for each class are: {self.label_name_dict}")
         self.label2class = {}
         self.all_label_name_ids = [self.mask_id]
         self.all_label_names = [self.tokenizer.mask_token]
         for class_idx in self.label_name_dict:
-            #map word to class {'politics':2, ...}
             for word in self.label_name_dict[class_idx]:
                 assert word not in self.label2class, f"\"{word}\" used as the label name by multiple classes!"
                 self.label2class[word] = class_idx
                 if word in self.vocab:
                     self.all_label_name_ids.append(self.vocab[word])
                     self.all_label_names.append(word)
+
+        # TODO multi vocab version
+        #def read_label_names(self, dataset_dir, label_name_file, extended_dict):
+
+        # ext_dict = os.path.join(self.dataset_dir, extended_dict)
+        # if os.path.exists(ext_dict):
+        #     print(f"Loading extended category labels {ext_dict}")
+        #     label_name_file = open(ext_dict)
+        # else:
+        #     label_name_file = open(os.path.join(dataset_dir, label_name_file))
+        # label_names = label_name_file.readlines()
+        # self.label_name_dict = {i: [word.lower() for word in category_words.strip().split()] for i, category_words in enumerate(label_names)}
+        #
+        # self.mappingWordIndexClass = {}
+        # self.mappingWord2Index = {}
+        # wordCounter = 0
+        # for i, words in self.label_name_dict.items():
+        #     for word in words:
+        #         self.mappingWord2Index[word] = wordCounter
+        #         self.mappingWordIndexClass[wordCounter] = i
+        #         wordCounter += 1
+        #
+        #
+        # #dictionary added to train multiple dictionaries for the same class
+        # self.indextoken2class = {i: [word.lower() for word in category_words.strip().split()] for i, category_words in enumerate(label_names)}
+        # print(f"Label names used for each class are: {self.label_name_dict}")
+        # self.label2class = {}
+        # self.all_label_name_ids = [self.mask_id]
+        # self.all_label_names = [self.tokenizer.mask_token]
+        # for class_idx in self.label_name_dict:
+        #     #map word to class {'politics':2, ...}
+        #     for word in self.label_name_dict[class_idx]:
+        #         assert word not in self.label2class, f"\"{word}\" used as the label name by multiple classes!"
+        #         self.label2class[word] = class_idx
+        #         if word in self.vocab:
+        #             self.all_label_name_ids.append(self.vocab[word])
+        #             self.all_label_names.append(word)
 
     # create dataset loader
     def make_dataloader(self, rank, data_dict, batch_size, tf=0):
@@ -406,8 +450,10 @@ class LOTClassTrainer(object):
         #eval switches off some layers that behave differently betweeen traning and predictiong
         model.eval()
         label_name_dataset_loader = self.make_dataloader(rank, self.label_name_data, self.eval_batch_size)
-        #CHANGE num class to num words
-        category_words_freq = {i: defaultdict(float) for i in range(len(self.mappingWordIndexClass))}
+        category_words_freq = {i: defaultdict(float) for i in range(self.num_class)}
+
+        # TODO multi vocab veersionCHANGE num class to num words
+        #category_words_freq = {i: defaultdict(float) for i in range(len(self.mappingWordIndexClass))}
         wrap_label_name_dataset_loader = tqdm(label_name_dataset_loader) if rank == 0 else label_name_dataset_loader
         try:
             for batch in wrap_label_name_dataset_loader:
@@ -446,8 +492,14 @@ class LOTClassTrainer(object):
                 if f[-3:] == '.pt':
                     gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
             assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
-            self.category_words_freq = {i: defaultdict(float) for i in range(len(self.mappingWordIndexClass))}
-            for i in range(len(self.mappingWordIndexClass)):
+
+            self.category_words_freq = {i: defaultdict(float) for i in range(self.num_class)}
+            for i in range(self.num_class):
+
+            #TODO multi vocab version
+            #self.category_words_freq = {i: defaultdict(float) for i in range(len(self.mappingWordIndexClass))}
+            #for i in range(len(self.mappingWordIndexClass)):
+
                 for category_words_freq in gather_res:
                     for word_id, freq in category_words_freq[i].items():
                         self.category_words_freq[i][word_id] += freq
@@ -498,7 +550,10 @@ class LOTClassTrainer(object):
 
                         if valid_doc.any():
                             mask_label = -1 * torch.ones_like(input_ids)
-                            mask_label[valid_idx] = self.mappingWordIndexClass[i] #TODO probably add here conversion word to class
+
+                            #TODO probably add here conversion word to class
+                            #mask_label[valid_idx] = self.mappingWordIndexClass[i]
+                            mask_label[valid_idx] = i
 
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
