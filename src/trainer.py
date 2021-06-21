@@ -500,7 +500,7 @@ class LOTClassTrainer(object):
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
-                            #all_reference.append(reference[valid_doc])
+                            all_reference.append(reference[valid_doc])
                             category_doc_num[i] += valid_doc.int().sum().item()
 
             all_input_ids = torch.cat(all_input_ids, dim=0)
