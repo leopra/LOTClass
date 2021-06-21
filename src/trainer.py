@@ -352,15 +352,18 @@ class LOTClassTrainer(object):
                     self.all_label_names.append(word)
 
     # create dataset loader
-    def make_dataloader(self, rank, data_dict, batch_size):
-        if "labels" in data_dict:
-            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
-
-        elif "tensor_spacy" in data_dict and "labels" not in data_dict: #TODO messy code, condition should be more clear
-            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["reference"])
-
+    def make_dataloader(self, rank, data_dict, batch_size, tf=0):
+        if tf==1:
+            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"], data_dict["labels"])
         else:
-            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"])
+            if "labels" in data_dict:
+                dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
+
+            elif "tensor_spacy" in data_dict and "labels" not in data_dict: #TODO messy code, condition should be more clear
+                dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["reference"])
+
+            else:
+                dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"])
 
         sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=rank)
         dataset_loader = DataLoader(dataset, sampler=sampler, batch_size=batch_size, shuffle=False)
@@ -546,6 +549,8 @@ class LOTClassTrainer(object):
             all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
             all_reference = torch.cat([res["all_reference"] for res in gather_res], dim=0)
 
+            print(all_reference)
+
             category_doc_num = {i: 0 for i in range(self.num_class)}
             for i in category_doc_num:
                 for res in gather_res:
@@ -560,7 +565,6 @@ class LOTClassTrainer(object):
                        "try to add more unlabeled documents to the training corpus (recommend) or reduce `--match_threshold` (not recommend)"
 
 
-            print(all_reference)
             self.mcp_used_data = all_reference
             torch.save(self.mcp_used_data, 'mcp_train_tf.pt')
 
@@ -572,7 +576,7 @@ class LOTClassTrainer(object):
     # prepare self supervision for masked category prediction (distributed function) using the argmax of seedwords wordcount
     def prepare_mcp_word_count_dist(self, rank, loader_name="mcp_train_tf.pt"):
 
-        train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size)
+        train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size, tf=1)
         all_input_ids = []
         all_mask_label = []
         all_input_mask = []
