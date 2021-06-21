@@ -465,7 +465,7 @@ class LOTClassTrainer(object):
         all_mask_label = []
         all_input_mask = []
         all_spacy_lemm = []
-        all_reference = []
+        #all_reference = []
         category_doc_num = defaultdict(int)
 
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
@@ -492,7 +492,7 @@ class LOTClassTrainer(object):
                         # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
 
-                        reference = batch[2]
+                        #reference = batch[2]
 
                         if valid_doc.any():
                             mask_label = -1 * torch.ones_like(input_ids)
@@ -501,20 +501,20 @@ class LOTClassTrainer(object):
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
-                            all_reference.append(reference[valid_doc])
+                            #all_reference.append(reference[valid_doc])
                             category_doc_num[i] += valid_doc.int().sum().item()
 
             all_input_ids = torch.cat(all_input_ids, dim=0)
             all_mask_label = torch.cat(all_mask_label, dim=0)
             all_input_mask = torch.cat(all_input_mask, dim=0)
             all_spacy_lemm = torch.cat(all_spacy_lemm, dim=0)
-            all_reference = torch.cat(all_reference, dim=0)
+            #all_reference = torch.cat(all_reference, dim=0)
             save_dict = {
                 "all_input_ids": all_input_ids,
                 "all_mask_label": all_mask_label,
                 "all_input_mask": all_input_mask,
                 "all_spacy_lemm": all_spacy_lemm,
-                "all_reference": all_reference,
+                #"all_reference": all_reference,
                 "category_doc_num": category_doc_num,
             }
 
