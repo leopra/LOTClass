@@ -471,6 +471,8 @@ class LOTClassTrainer(object):
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
         try:
             for batch in wrap_train_dataset_loader:
+                print('batchid', batch[0])
+                print('batchref', batch[2])
                 with torch.no_grad():
                     input_ids = batch[0].to(rank)
                     input_mask = batch[1].to(rank)
@@ -532,6 +534,7 @@ class LOTClassTrainer(object):
         if os.path.exists(loader_file):
             print(f"Loading masked category prediction data from {loader_file}")
             self.mcp_data = torch.load(loader_file)
+
         else:
             loader_file = os.path.join(self.dataset_dir, loader_name)
             print("Preparing self supervision for masked category prediction.")
@@ -716,6 +719,21 @@ class LOTClassTrainer(object):
             self.cuda_mem_error(err, "train", rank)
 
     def build_mixed_dataset(self, data1_mlp="mcp_train.pt", data2_cls="mcp_train_cls.pt"):
+        mcp = self.mcp_data
+        cls = self.mcp_data_tf
+        setmcp = set(mcp["reference"].numpy())
+        setcls = set(cls["reference"].numpy)
+        duplicaterefs = setmcp.intersectin(setcls)
+
+        clstoadd = {"input_ids": [], "attention_mask": [], "reference": [], "labels":[]}
+
+        #TODO for now i just remove cls found in same document as mcp , im modifying the self.train_mcp permanently
+        for el in zip(cls["input_ids"], cls["attention_mask"], cls["reference"], cls["mask_label"]):
+            if el[2] not in duplicaterefs:
+                mcp["input_ids"].append(el[0])
+                mcp["attention_mask"].append(el[1])
+                mcp["reference"].append(el[2])
+                mcp["mask_label"].append(el[3])
 
 
     # masked category prediction
@@ -730,6 +748,8 @@ class LOTClassTrainer(object):
             self.prepare_mcp(top_pred_num, match_threshold)
             print("Creating Labels by Word Count")
             self.prepare_mcp_word_count()
+            print("mixing dataset")
+            self.build_mixed_dataset()
             print(f"\nTraining model via masked category prediction.")
             mp.spawn(self.mcp_dist, nprocs=self.world_size, args=(epochs, loader_name))
         self.model.load_state_dict(torch.load(loader_file))
