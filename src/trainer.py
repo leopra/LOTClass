@@ -354,7 +354,7 @@ class LOTClassTrainer(object):
     # create dataset loader
     def make_dataloader(self, rank, data_dict, batch_size, tf=0):
         if tf==1:
-            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"], data_dict["labels"])
+            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"], data_dict["reference"])
         else:
             if "labels" in data_dict:
                 dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
@@ -574,48 +574,56 @@ class LOTClassTrainer(object):
         print(f"There are totally {len(self.mcp_data['input_ids'])} documents with category indicative terms.")
 
     # prepare self supervision for masked category prediction (distributed function) using the argmax of seedwords wordcount
-    def prepare_mcp_word_count_dist(self, rank, loader_name="mcp_train_tf.pt"):
+    def prepare_mcp_word_count_dist(self, rank, loader_name="mcp_train_cls.pt"):
 
         train_dataset_loader = self.make_dataloader(rank, self.train_data, self.eval_batch_size, tf=1)
         all_input_ids = []
         all_mask_label = []
         all_input_mask = []
+        all_reference = []
         category_doc_num = defaultdict(int)
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
         for batch in wrap_train_dataset_loader:
             input_ids = batch[0]
             input_mask = batch[1]
-            mask_label = batch[2] #TODO this should be the labels created by prepare_mcp_dist
+            mask_label = -1 * torch.ones_like(input_ids)
+            reference = batch[3]
 
             # TODO added check for words counts
-            spacy_lemm = batch[3]
+            spacy_lemm = batch[2]
             # print(self.label_name_dict_spacy)
             X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(),
                                                    self.label_name_dict_spacy)
 
             print('preds:', y_cls)
+            y_cls = torch.tensor(y_cls)
             #add prediction token [CLS] to the class found or keep -1
-            mask_label[:, 0] = torch.tensor(y_cls)
-            all_input_ids.append(input_ids)
-            all_mask_label.append(mask_label)
-            all_input_mask.append(input_mask)
-            category_doc_num[0] += 0 #TODO add this count feature
-        all_input_ids = torch.cat(all_input_ids, dim=0)
-        all_mask_label = torch.cat(all_mask_label, dim=0)
-        all_input_mask = torch.cat(all_input_mask, dim=0)
-        save_dict = {
-            "all_input_ids": all_input_ids,
-            "all_mask_label": all_mask_label,
-            "all_input_mask": all_input_mask,
-            "category_doc_num": category_doc_num,
-        }
+            valid_doc = y_cls > 0
+            if valid_doc.any():
+                mask_label[:, 0] = y_cls
+                all_input_ids.append(input_ids[valid_doc])
+                all_mask_label.append(mask_label[valid_doc])
+                all_input_mask.append(input_mask[valid_doc])
+                all_reference.append(reference[valid_doc])
+                category_doc_num[0] += 0 #TODO add this count feature
+            all_input_ids = torch.cat(all_input_ids, dim=0)
+            all_mask_label = torch.cat(all_mask_label, dim=0)
+            all_input_mask = torch.cat(all_input_mask, dim=0)
+            all_reference = torch.cat(all_reference, dim=0)
+            save_dict = {
+                "all_input_ids": all_input_ids,
+                "all_mask_label": all_mask_label,
+                "all_input_mask": all_input_mask,
+                "all_reference": all_reference
+                "category_doc_num": category_doc_num,
+            }
         save_file = os.path.join(self.temp_dir, f"{rank}_" + loader_name)
         print('saved', save_file)
         torch.save(save_dict, save_file)
 
 
     # prepare self supervision on [CLS] token prediction using the argmax of seedwords wordcount
-    def prepare_mcp_word_count(self, loader_name="mcp_train_tf.pt"):
+    def prepare_mcp_word_count(self, loader_name="mcp_train_cls.pt"):
         if len(self.label_name_dict_spacy.keys()) == 0:
             self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(
                 os.path.join(self.dataset_dir, 'spacy_data.pt'))
@@ -634,12 +642,13 @@ class LOTClassTrainer(object):
                      args=(loader_name))
             gather_res = []
             for f in os.listdir(self.temp_dir):
-                if f[-3:] == '.tft':
+                if f[-3:] == '.pt':
                     gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
             assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
             all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
             all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
             all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
+            all_reference = torch.cat([res["all_reference"] for res in gather_res], dim=0)
             category_doc_num = {i: 0 for i in range(self.num_class)}
             for i in category_doc_num:
                 for res in gather_res:
@@ -648,7 +657,7 @@ class LOTClassTrainer(object):
             print(
                 f"Number of documents with category indicative word count found for each category is: {category_doc_num}")
             self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask,
-                             "labels": all_mask_label}
+                             "labels": all_mask_label, "reference": all_reference}
 
             torch.save(self.mcp_data_tf, loader_file)
             if os.path.exists(self.temp_dir):
@@ -706,16 +715,21 @@ class LOTClassTrainer(object):
         except RuntimeError as err:
             self.cuda_mem_error(err, "train", rank)
 
+    def build_mixed_dataset(self, data1_mlp="mcp_train.pt", data2_cls="mcp_train_cls.pt"):
+
+
     # masked category prediction
     def mcp(self, top_pred_num=50, match_threshold=20, epochs=5, loader_name="mcp_model.pt"):
         loader_file = os.path.join(self.dataset_dir, loader_name)
+
         if os.path.exists(loader_file):
             print(f"\nLoading model trained via masked category prediction from {loader_file}")
-            print("Creating Labels by Word Count")
-            self.prepare_mcp_word_count()
 
         else:
+            print("Creating Labels by Language Model")
             self.prepare_mcp(top_pred_num, match_threshold)
+            print("Creating Labels by Word Count")
+            self.prepare_mcp_word_count()
             print(f"\nTraining model via masked category prediction.")
             mp.spawn(self.mcp_dist, nprocs=self.world_size, args=(epochs, loader_name))
         self.model.load_state_dict(torch.load(loader_file))
