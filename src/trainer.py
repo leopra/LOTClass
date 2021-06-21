@@ -536,7 +536,7 @@ class LOTClassTrainer(object):
             save_file = os.path.join(self.temp_dir, f"{rank}_"+loader_name)
             torch.save(save_dict, save_file)
 
-            save_file_ = os.path.join(self.temp_dir, f"{rank}_"+loader_name[:-3] + '.tft') #save unlabeled documents in different file extension
+            save_file_ = os.path.join(self.temp_dir, f"{rank}_"+loader_name[:-4] + '.tft') #save unlabeled documents in different file extension
             torch.save(save_dict_, save_file_)
 
         except RuntimeError as err:
@@ -581,7 +581,7 @@ class LOTClassTrainer(object):
 
             gather_res = []
             for f in os.listdir(self.temp_dir):
-                if f[-3:] == '.tft':
+                if f[-4:] == '.tft':
                     print(f)
                     gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
 
