@@ -544,7 +544,7 @@ class LOTClassTrainer(object):
             all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
             all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
             all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
-            all_spacy_lemm = torch.cat([res["all_spacy_lemm"] for res in gather_res], dim=0)
+            all_reference = torch.cat([res["all_reference"] for res in gather_res], dim=0)
 
             category_doc_num = {i: 0 for i in range(self.num_class)}
             for i in category_doc_num:
@@ -552,32 +552,20 @@ class LOTClassTrainer(object):
                     if i in res["category_doc_num"]:
                         category_doc_num[i] += res["category_doc_num"][i]
             print(f"Number of documents with category indicative terms found for each category is: {category_doc_num}")
-            self.mcp_data = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "labels": all_mask_label, "spacy_lemm": all_spacy_lemm}
+            self.mcp_data = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "labels": all_mask_label, "reference": all_reference}
             torch.save(self.mcp_data, loader_file)
 
             for i in category_doc_num:
                 assert category_doc_num[i] > 10, f"Too few ({category_doc_num[i]}) documents with category indicative terms found for category {i}; " \
                        "try to add more unlabeled documents to the training corpus (recommend) or reduce `--match_threshold` (not recommend)"
 
-            gather_res = []
-            for f in os.listdir(self.temp_dir):
-                if f[-4:] == '.tft':
-                    print(f)
-                    gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
 
-            print(os.listdir(self.temp_dir))
-
-            #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
-            all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
-            all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
-            all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
-            all_spacy_lemm = torch.cat([res["all_spacy_lemm"] for res in gather_res], dim=0)
 
             self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "labels": all_mask_label, "spacy_lemm": all_spacy_lemm}
             torch.save(self.mcp_data_tf, 'mcp_train_tf.pt')
-            # if os.path.exists(self.temp_dir):
-            #     shutil.rmtree(self.temp_dir)
-            #TODO do not delete as the data is used by word count function
+
+            if os.path.exists(self.temp_dir):
+                shutil.rmtree(self.temp_dir)
 
         print(f"There are totally {len(self.mcp_data['input_ids'])} documents with category indicative terms.")
 
