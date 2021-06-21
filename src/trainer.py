@@ -112,6 +112,9 @@ class LOTClassTrainer(object):
         return encodedText
 
     def generate_pseudo_labels(self, df, labels, label_term_dict):
+        print(df)
+        print(labels)
+        print(label_term_dict)
         def argmax_label(count_dict):
             print(count_dict)
             maxi = 0
@@ -594,7 +597,7 @@ class LOTClassTrainer(object):
                                                    self.label_name_dict_spacy)
 
             y_cls = torch.tensor(y_cls)
-            print('preds:', y_cls[y_cls > -1])
+            #print('preds:', y_cls[y_cls > -1])
             #add prediction token [CLS] to the class found or keep -1
             valid_doc = y_cls > 0
             if valid_doc.any():
