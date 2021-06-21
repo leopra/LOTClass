@@ -593,8 +593,8 @@ class LOTClassTrainer(object):
             X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(),
                                                    self.label_name_dict_spacy)
 
-            print('preds:', y_cls[y_cls > -1])
             y_cls = torch.tensor(y_cls)
+            print('preds:', y_cls[y_cls > -1])
             #add prediction token [CLS] to the class found or keep -1
             valid_doc = y_cls > 0
             if valid_doc.any():
