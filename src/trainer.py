@@ -345,7 +345,7 @@ class LOTClassTrainer(object):
             self.test_data = self.create_dataset(dataset_dir, test_file, test_label_file, "test.pt")
 
     # read label names from file
-    def read_label_names(self, dataset_dir, label_name_file):
+    def read_label_names(self, dataset_dir, label_name_file, extended_dict):
         label_name_file = open(os.path.join(dataset_dir, label_name_file))
         label_names = label_name_file.readlines()
         self.label_name_dict = {i: [word.lower() for word in category_words.strip().split()] for i, category_words in enumerate(label_names)}
