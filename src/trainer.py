@@ -593,7 +593,7 @@ class LOTClassTrainer(object):
             X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(),
                                                    self.label_name_dict_spacy)
 
-            print('preds:', y_cls)
+            print('preds:', y_cls[y_cls > -1])
             y_cls = torch.tensor(y_cls)
             #add prediction token [CLS] to the class found or keep -1
             valid_doc = y_cls > 0
@@ -604,17 +604,18 @@ class LOTClassTrainer(object):
                 all_input_mask.append(input_mask[valid_doc])
                 all_reference.append(reference[valid_doc])
                 category_doc_num[0] += 0 #TODO add this count feature
-            all_input_ids = torch.cat(all_input_ids, dim=0)
-            all_mask_label = torch.cat(all_mask_label, dim=0)
-            all_input_mask = torch.cat(all_input_mask, dim=0)
-            all_reference = torch.cat(all_reference, dim=0)
-            save_dict = {
-                "all_input_ids": all_input_ids,
-                "all_mask_label": all_mask_label,
-                "all_input_mask": all_input_mask,
-                "all_reference": all_reference,
-                "category_doc_num": category_doc_num,
-            }
+
+        all_input_ids = torch.cat(all_input_ids, dim=0)
+        all_mask_label = torch.cat(all_mask_label, dim=0)
+        all_input_mask = torch.cat(all_input_mask, dim=0)
+        all_reference = torch.cat(all_reference, dim=0)
+        save_dict = {
+            "all_input_ids": all_input_ids,
+            "all_mask_label": all_mask_label,
+            "all_input_mask": all_input_mask,
+            "all_reference": all_reference,
+            "category_doc_num": category_doc_num,
+        }
         save_file = os.path.join(self.temp_dir, f"{rank}_" + loader_name)
         print('saved', save_file)
         torch.save(save_dict, save_file)
