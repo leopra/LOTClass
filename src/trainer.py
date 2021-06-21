@@ -213,6 +213,7 @@ class LOTClassTrainer(object):
             # TODO check if this works
             spacy_encode = self.computeLemmSpacy(docs, 'spacy_lemm.txt')
             tensor_spacy = torch.tensor(spacy_encode)
+            reference = torch.tensor([x for x in range(len(tensor_spacy))])
 
             print(f"Converting texts into tensors.")
             chunk_size = ceil(len(docs) / self.num_cpus)
@@ -226,9 +227,9 @@ class LOTClassTrainer(object):
                 truth = open(os.path.join(dataset_dir, label_file))
                 labels = [int(label.strip()) for label in truth.readlines()]
                 labels = torch.tensor(labels)
-                data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels, "tensor_spacy": tensor_spacy}
+                data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels, "tensor_spacy": tensor_spacy, "reference": reference}
             else:
-                data = {"input_ids": input_ids, "attention_masks": attention_masks, "tensor_spacy": tensor_spacy}
+                data = {"input_ids": input_ids, "attention_masks": attention_masks, "tensor_spacy": tensor_spacy, "reference": reference}
             torch.save(data, loader_file)
 
         if find_label_name:
@@ -355,8 +356,9 @@ class LOTClassTrainer(object):
         if "labels" in data_dict:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["labels"])
 
-        elif "tensor_spacy" in data_dict and "labels" not in data_dict:
-            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["tensor_spacy"])
+        elif "tensor_spacy" in data_dict and "labels" not in data_dict: #TODO messy code, condition should be more clear
+            dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"], data_dict["reference"])
+
         else:
             dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"])
 
@@ -460,12 +462,9 @@ class LOTClassTrainer(object):
         all_mask_label = []
         all_input_mask = []
         all_spacy_lemm = []
-
-        all_input_ids_ = []
-        all_mask_label_ = []
-        all_input_mask_ = []
-        all_spacy_lemm_ = []
+        all_reference = []
         category_doc_num = defaultdict(int)
+
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
         try:
             for batch in wrap_train_dataset_loader:
@@ -487,10 +486,10 @@ class LOTClassTrainer(object):
                         match_count = torch.sum(match_idx.int(), dim=-1)
                         valid_idx = (match_count > match_threshold) & (input_mask > 0)
 
-                        spacy_lemm = batch[2]
                         # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
-                        non_valid_doc = torch.sum(valid_idx, dim=-1) == 0
+
+                        reference = batch[2]
 
                         if valid_doc.any():
                             mask_label = -1 * torch.ones_like(input_ids)
@@ -499,45 +498,26 @@ class LOTClassTrainer(object):
                             all_input_ids.append(input_ids[valid_doc].cpu())
                             all_mask_label.append(mask_label[valid_doc].cpu())
                             all_input_mask.append(input_mask[valid_doc].cpu())
-                            all_spacy_lemm.append(spacy_lemm)
+                            all_reference.append(reference[valid_doc])
                             category_doc_num[i] += valid_doc.int().sum().item()
 
-                        if non_valid_doc.any():
-                            mask_label_ = -1 * torch.ones_like(input_ids)
-
-                            all_input_ids_.append(input_ids[valid_doc].cpu())
-                            all_mask_label_.append(mask_label_[valid_doc].cpu())
-                            all_input_mask_.append(input_mask[valid_doc].cpu())
-                            all_spacy_lemm_.append(spacy_lemm)
 
             all_input_ids = torch.cat(all_input_ids, dim=0)
             all_mask_label = torch.cat(all_mask_label, dim=0)
             all_input_mask = torch.cat(all_input_mask, dim=0)
             all_spacy_lemm = torch.cat(all_spacy_lemm, dim=0)
-
+            all_reference = torch.cat(all_reference, dim=0)
             save_dict = {
                 "all_input_ids": all_input_ids,
                 "all_mask_label": all_mask_label,
                 "all_input_mask": all_input_mask,
                 "all_spacy_lemm": all_spacy_lemm,
+                "all_reference": all_reference,
                 "category_doc_num": category_doc_num,
             }
-            all_input_ids_ = torch.cat(all_input_ids_, dim=0)
-            all_mask_label_ = torch.cat(all_mask_label_, dim=0)
-            all_input_mask_ = torch.cat(all_input_mask_, dim=0)
-            all_spacy_lemm_ = torch.cat(all_spacy_lemm_, dim=0)
 
-            save_dict_ = {
-                "all_input_ids": all_input_ids_,
-                "all_mask_label": all_mask_label_,
-                "all_input_mask": all_input_mask_,
-                "all_spacy_lemm": all_spacy_lemm_
-            }
             save_file = os.path.join(self.temp_dir, f"{rank}_"+loader_name)
             torch.save(save_dict, save_file)
-
-            save_file_ = os.path.join(self.temp_dir, f"{rank}_"+loader_name[:-3] + '.tft') #save unlabeled documents in different file extension
-            torch.save(save_dict_, save_file_)
 
         except RuntimeError as err:
             self.cuda_mem_error(err, "eval", rank)
