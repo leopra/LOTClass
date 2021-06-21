@@ -633,11 +633,9 @@ class LOTClassTrainer(object):
             self.mcp_data_tf = torch.load(loader_file)
         else:
             loader_file = os.path.join(self.dataset_dir, loader_name)
-            print("Preparing labels from word count.")
             if not os.path.exists(self.temp_dir):
                 os.makedirs(self.temp_dir)
-            mp.spawn(self.prepare_mcp_word_count_dist, nprocs=self.world_size,
-                     args=(loader_name))
+            mp.spawn(self.prepare_mcp_word_count_dist, nprocs=self.world_size)
             gather_res = []
             for f in os.listdir(self.temp_dir):
                 if f[-3:] == '.pt':
