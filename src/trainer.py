@@ -471,8 +471,6 @@ class LOTClassTrainer(object):
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
         try:
             for batch in wrap_train_dataset_loader:
-                print('batchid', batch[0].size())
-                print('batchref', batch[2].size())
                 with torch.no_grad():
                     input_ids = batch[0].to(rank)
                     input_mask = batch[1].to(rank)
@@ -506,6 +504,7 @@ class LOTClassTrainer(object):
                             all_reference.append(reference[valid_doc])
                             category_doc_num[i] += valid_doc.int().sum().item()
 
+                            print("allref", all_reference)
 
             all_input_ids = torch.cat(all_input_ids, dim=0)
             all_mask_label = torch.cat(all_mask_label, dim=0)
@@ -523,6 +522,7 @@ class LOTClassTrainer(object):
 
             save_file = os.path.join(self.temp_dir, f"{rank}_"+loader_name)
             torch.save(save_dict, save_file)
+            print("saved", save_file)
 
         except RuntimeError as err:
             self.cuda_mem_error(err, "eval", rank)
