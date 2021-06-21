@@ -621,6 +621,7 @@ class LOTClassTrainer(object):
             X, y_cls = self.generate_pseudo_labels(spacy_lemm, self.label_name_dict_spacy.keys(),
                                                    self.label_name_dict_spacy)
 
+            print('preds:', y_cls)
             #add prediction token [CLS] to the class found or keep -1
             mask_label[:, 0] = torch.tensor(y_cls)
             all_input_ids.append(input_ids)
@@ -637,10 +638,11 @@ class LOTClassTrainer(object):
             "category_doc_num": category_doc_num,
         }
         save_file = os.path.join(self.temp_dir, f"{rank}_" + loader_name)
+        print('saved', save_file)
         torch.save(save_dict, save_file)
 
 
-    # prepare self supervision on [CLS[ token prediction using the argmax of seedwords wordcount
+    # prepare self supervision on [CLS] token prediction using the argmax of seedwords wordcount
     def prepare_mcp_word_count(self, loader_name="mcp_train_tf.pt"):
         if len(self.label_name_dict_spacy.keys()) == 0:
             self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(
@@ -650,7 +652,7 @@ class LOTClassTrainer(object):
 
         if os.path.exists(loader_file):
             print(f"Loading masked category prediction data from {loader_file}")
-            self.mcp_data = torch.load(loader_file)
+            self.mcp_data_tf = torch.load(loader_file)
         else:
             loader_file = os.path.join(self.dataset_dir, loader_name)
             print("Preparing labels from word count.")
@@ -737,7 +739,7 @@ class LOTClassTrainer(object):
         loader_file = os.path.join(self.dataset_dir, loader_name)
         if os.path.exists(loader_file):
             print(f"\nLoading model trained via masked category prediction from {loader_file}")
-            print("Creating Labels by Word Count}")
+            print("Creating Labels by Word Count")
             self.prepare_mcp_word_count()
 
         else:
