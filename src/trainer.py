@@ -617,7 +617,7 @@ class LOTClassTrainer(object):
                 "all_input_ids": all_input_ids,
                 "all_mask_label": all_mask_label,
                 "all_input_mask": all_input_mask,
-                "all_reference": all_reference
+                "all_reference": all_reference,
                 "category_doc_num": category_doc_num,
             }
         save_file = os.path.join(self.temp_dir, f"{rank}_" + loader_name)
