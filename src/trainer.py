@@ -27,6 +27,7 @@ from util import *
 from sklearn.feature_extraction.text import CountVectorizer
 from collections import defaultdict
 import math
+from collections import Counter
 
 class LOTClassTrainer(object):
 
@@ -129,13 +130,11 @@ class LOTClassTrainer(object):
         y = []
         X = []
         for index, tokens in enumerate(df):
-            words = tokens
+            words = tokens.numpy()
             count_dict = {}
             flag = 0
             for l in list(labels):
-                seed_words = set()
-                for w in label_term_dict[l]:
-                    seed_words.add(w)
+                seed_words = set(label_term_dict[l])
                 int_labels = list(set(words).intersection(seed_words))
                 if len(int_labels) == 0:
                     continue
@@ -547,9 +546,10 @@ class LOTClassTrainer(object):
                         for word_id in category_vocab:
                             match_idx = (sorted_res == word_id) | match_idx #TODO what is going on here
                         match_count = torch.sum(match_idx.int(), dim=-1)
-                        valid_idx = (match_count > match_threshold) & (input_mask > 0)
 
-                        # TODO put this back valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
+                        # TODO put this back valid_idx = (match_count > match_threshold) & (input_mask > 0)
+
+                        valid_idx = (match_count > len(category_vocab) * match_threshold * k / top_pred_num) & (input_mask > 0)
                         valid_doc = torch.sum(valid_idx, dim=-1) > 0
 
                         reference = batch[2]
@@ -643,7 +643,7 @@ class LOTClassTrainer(object):
         all_mask_label = []
         all_input_mask = []
         all_reference = []
-        category_doc_num = defaultdict(int)
+        category_doc_num = Counter()
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
         for batch in wrap_train_dataset_loader:
             input_ids = batch[0]
@@ -667,7 +667,7 @@ class LOTClassTrainer(object):
                 all_mask_label.append(mask_label[valid_doc])
                 all_input_mask.append(input_mask[valid_doc])
                 all_reference.append(reference[valid_doc])
-                category_doc_num[0] += 0 #TODO add this count feature
+                category_doc_num = category_doc_num + Counter(y_cls.tolist()) #TODO add this count feature
 
         all_input_ids = torch.cat(all_input_ids, dim=0)
         all_mask_label = torch.cat(all_mask_label, dim=0)
@@ -780,18 +780,23 @@ class LOTClassTrainer(object):
         mcp = self.mcp_data
         cls = self.mcp_data_tf
         setmcp = set(mcp["reference"].numpy())
-        setcls = set(cls["reference"].numpy)
-        duplicaterefs = setmcp.intersectin(setcls)
+        setcls = set(cls["reference"].numpy())
+        duplicaterefs = setmcp.intersection(setcls)
 
-        clstoadd = {"input_ids": [], "attention_mask": [], "reference": [], "labels":[]}
+        mcpad = {"input_ids": [], "attention_masks": [], "reference": [], "labels": []}
 
         #TODO for now i just remove cls found in same document as mcp , im modifying the self.train_mcp permanently
-        for el in zip(cls["input_ids"], cls["attention_mask"], cls["reference"], cls["mask_label"]):
+        for el in zip(cls["input_ids"], cls["attention_masks"], cls["reference"], cls["labels"]):
             if el[2] not in duplicaterefs:
-                mcp["input_ids"].append(el[0])
-                mcp["attention_mask"].append(el[1])
-                mcp["reference"].append(el[2])
-                mcp["mask_label"].append(el[3])
+                mcpad["input_ids"].append(el[0].numpy())
+                mcpad["attention_masks"].append(el[1].numpy())
+                mcpad["reference"].append(el[2].numpy().tolist())
+                mcpad["labels"].append(el[3].numpy())
+
+        mcp["input_ids"] = torch.cat((mcp["input_ids"],torch.tensor(mcpad["input_ids"])) , dim=0)
+        mcp["attention_masks"] = torch.cat((mcp["attention_masks"],torch.tensor(mcpad["attention_masks"])) , dim=0)
+        mcp["reference"] = torch.cat((mcp["reference"],torch.tensor(mcpad["reference"])) , dim=0)
+        mcp["labels"] = torch.cat((mcp["labels"],torch.tensor(mcpad["labels"])) , dim=0)
 
 
     # masked category prediction
