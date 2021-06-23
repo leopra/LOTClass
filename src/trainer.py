@@ -158,8 +158,8 @@ class LOTClassTrainer(object):
                     X.append(tokens)
             else:
                 y.append(-1)
-        if (np.array(y) != -1).any():
-            print('found:', [(x,y) for x,y in list(zip(X,y)) if y != -1])
+        # if (np.array(y) != -1).any():
+        #     print('found:', [(x,y) for x,y in list(zip(X,y)) if y != -1])
         return X, y
 
     # set up distributed training
@@ -581,7 +581,7 @@ class LOTClassTrainer(object):
 
             save_file = os.path.join(self.temp_dir, f"{rank}_"+loader_name)
             torch.save(save_dict, save_file)
-            print("saved", save_file)
+            #print("saved", save_file)
 
         except RuntimeError as err:
             self.cuda_mem_error(err, "eval", rank)
@@ -610,8 +610,6 @@ class LOTClassTrainer(object):
             all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
             all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
             all_reference = torch.cat([res["all_reference"] for res in gather_res], dim=0)
-
-            print(all_reference)
 
             category_doc_num = {i: 0 for i in range(self.num_class)}
             for i in category_doc_num:
@@ -681,7 +679,7 @@ class LOTClassTrainer(object):
             "category_doc_num": category_doc_num,
         }
         save_file = os.path.join(self.temp_dir, f"{rank}_" + loader_name)
-        print('saved', save_file)
+        #print('saved', save_file)
         torch.save(save_dict, save_file)
 
 
@@ -715,8 +713,8 @@ class LOTClassTrainer(object):
                 for res in gather_res:
                     if i in res["category_doc_num"]:
                         category_doc_num[i] += res["category_doc_num"][i]
-            print(
-                f"Number of documents with category indicative word count found for each category is: {category_doc_num}")
+
+            print(f"Number of documents with category indicative word count found for each category is: {category_doc_num}")
             self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask,
                              "labels": all_mask_label, "reference": all_reference}
 
@@ -996,7 +994,7 @@ class LOTClassTrainer(object):
 
 
 
-    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, term_count, word_to_index, doc_freq_thresh):
+    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, term_count, doc_freq_thresh):
         E_LT = np.zeros((label_count, term_count))
         components = {}
 
@@ -1005,7 +1003,7 @@ class LOTClassTrainer(object):
 
         for l in label_docs_dict:
             components[l] = {}
-            docfreq_local = calculate_doc_freq(docs)
+            docfreq_local = calculate_doc_freq(label_docs_dict[l])
 
             docs = [list(map(str,arr)) for arr in label_docs_dict[l]]
 
@@ -1014,26 +1012,27 @@ class LOTClassTrainer(object):
                 X = vect.fit_transform(docs)
                 rel_freq = X.sum(axis=0) / len(docs)
                 rel_freq = np.asarray(rel_freq).reshape(-1)
-                names = [int(num) for num in vect.get_feature_names()]
+                names = vect.get_feature_names()
 
                 for i, name in enumerate(names):
                     try:
-                        if docfreq_local[name] < doc_freq_thresh:
+                        if docfreq_local[int(name)] < doc_freq_thresh:
                             continue
                     except:
                         continue
-                    E_LT[l][name] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[
-                        name] * np.tanh(rel_freq[i])
-                    components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
-                                           "idf": inv_docfreq[name],
+                    E_LT[l][i] = (docfreq_local[int(name)] / docfreq[int(name)]) * inv_docfreq[
+                        int(name)] * np.tanh(rel_freq[i])
+                    components[l][name] = {"reldocfreq": docfreq_local[int(name)] / docfreq[int(name)],
+                                           "idf": inv_docfreq[int(name)],
                                            "rel_freq": np.tanh(rel_freq[i]),
-                                           "rank": E_LT[l][name]}
+                                           "rank": E_LT[l][i]}
         return E_LT, components
 
     def expand(self, E_LT, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
 
         word_map = {}
         zero_docs_labels = set()
+        #TODO remmber
         stopwords_vocab = stopwords.words('english')
         for l in range(label_count):
             N=20
@@ -1079,26 +1078,22 @@ class LOTClassTrainer(object):
 
         ### VARIABLES INTEGRATION
         label_count = self.num_class
-        #TODO HARDCODED
-        #index_to_label = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
-        #label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
-        #label_to_index = dict([(i,x) for (x,i) in index_to_label.items()])
 
         pred_label_file = os.path.join(self.dataset_dir, "pred_labels_train.pt")
 
         #### PREDICTION AND EXPANSION
-        if os.path.exists(pred_label_file):
-            pred_labels = torch.load(pred_label_file)
-        else:
-            loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
-            assert os.path.exists(loader_file)
-            print(f"\nLoading final model from {loader_file}, seed expansion")
-            self.model.load_state_dict(torch.load(loader_file))
-            self.model.to(0)
-            train_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
-            train_dataset_loader = DataLoader(train_set, sampler=SequentialSampler(train_set), batch_size=self.eval_batch_size)
-            pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred").numpy()
-            torch.save(pred_labels, pred_label_file)
+        # if os.path.exists(pred_label_file):
+        #     pred_labels = torch.load(pred_label_file)
+        # else:
+        #     loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
+        #     assert os.path.exists(loader_file)
+        #     print(f"\nLoading final model from {loader_file}, seed expansion")
+        #     self.model.load_state_dict(torch.load(loader_file))
+        #     self.model.to(0)
+        #     train_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
+        #     train_dataset_loader = DataLoader(train_set, sampler=SequentialSampler(train_set), batch_size=self.eval_batch_size)
+        #     pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred").numpy()
+        #     torch.save(pred_labels, pred_label_file)
 
         df = data["tensor_spacy"].numpy()
 
@@ -1107,19 +1102,19 @@ class LOTClassTrainer(object):
                 os.path.join(self.dataset_dir, 'spacy_data.pt'))
 
         #FOR TESTING use random prediction as the 120k preds take a lot of time
-        #import random
-        #pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(df))])
+        import random
+        pred_labels = np.array([random.sample([0,1,2,3,4,5,6,7,8,9,10,11,12],1)[0] for x in range(len(df))])
 
         label_docs_dict = get_label_docs_dict(df, self.label_name_dict_spacy, pred_labels)
 
-        print([len(x) for y,x in label_docs_dict.items()])
+        print("documents for each class:", [len(x) for y,x in label_docs_dict.items()])
 
         docfreq = calculate_df_doc_freq(df)
         inv_docfreq = calculate_inv_doc_freq(df, docfreq)
 
         term_count = len(self.spacyWord2Idx)
         E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict,
-                                                term_count, self.spacyWord2Idx, doc_freq_thresh=5)
+                                                term_count, doc_freq_thresh=5)
 
         label_term_dict = self.expand(E_LT, self.spacyIdx2Word, 1, label_count, self.label_name_dict_spacy, label_docs_dict, n1=5)
 
