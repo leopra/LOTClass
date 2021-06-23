@@ -1020,12 +1020,12 @@ class LOTClassTrainer(object):
                             continue
                     except:
                         continue
-                    E_LT[l][int(names)] = (docfreq_local[int(name)] / docfreq[int(name)]) * inv_docfreq[
+                    E_LT[l][int(name)] = (docfreq_local[int(name)] / docfreq[int(name)]) * inv_docfreq[
                         int(name)] * np.tanh(rel_freq[i])
                     components[l][name] = {"reldocfreq": docfreq_local[int(name)] / docfreq[int(name)],
                                            "idf": inv_docfreq[int(name)],
                                            "rel_freq": np.tanh(rel_freq[i]),
-                                           "rank": E_LT[l][int(names)]}
+                                           "rank": E_LT[l][int(name)]}
         return E_LT, components
 
     def expand(self, E_LT, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
