@@ -87,7 +87,7 @@ class LOTClassTrainer(object):
 
         vectorizer = CountVectorizer(analyzer=lambda x: x)
         vectorizer.fit_transform(lemmDocs)  # sparse matrix with columns corresponding to words
-        words = {w:i for i,w in enumerate(vectorizer.get_feature_names())}
+        words = vectorizer.vocabulary_
         encodedText = np.full((len(lemmDocs),max_len),-1, dtype=int)
 
         for j,doc in enumerate(lemmDocs):
@@ -1020,12 +1020,12 @@ class LOTClassTrainer(object):
                             continue
                     except:
                         continue
-                    E_LT[l][i] = (docfreq_local[int(name)] / docfreq[int(name)]) * inv_docfreq[
+                    E_LT[l][int(names)] = (docfreq_local[int(name)] / docfreq[int(name)]) * inv_docfreq[
                         int(name)] * np.tanh(rel_freq[i])
                     components[l][name] = {"reldocfreq": docfreq_local[int(name)] / docfreq[int(name)],
                                            "idf": inv_docfreq[int(name)],
                                            "rel_freq": np.tanh(rel_freq[i]),
-                                           "rank": E_LT[l][i]}
+                                           "rank": E_LT[l][int(names)]}
         return E_LT, components
 
     def expand(self, E_LT, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
