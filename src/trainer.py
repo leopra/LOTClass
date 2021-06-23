@@ -1020,11 +1020,11 @@ class LOTClassTrainer(object):
                             continue
                     except:
                         continue
-                    E_LT[l][int(name)]
                     docfreq_local[int(name)]
                     docfreq_local[int(name)]
                     inv_docfreq[int(name)]
                     np.tanh(rel_freq[i])
+                    E_LT[l][int(name)]
                     E_LT[l][int(name)] = (docfreq_local[int(name)] / docfreq_local[int(name)]) * inv_docfreq[
                         int(name)] * np.tanh(rel_freq[i])
                     components[l][name] = {"reldocfreq": docfreq_local[int(name)] / docfreq[int(name)],
