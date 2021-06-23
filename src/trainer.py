@@ -115,7 +115,7 @@ class LOTClassTrainer(object):
     def generate_pseudo_labels(self, df, labels, label_term_dict):
 
         def argmax_label(count_dict):
-            print('count', count_dict)
+            #print('count', count_dict)
             maxi = 0
             max_label = None
             for l in count_dict:
@@ -724,7 +724,7 @@ class LOTClassTrainer(object):
             if os.path.exists(self.temp_dir):
                 shutil.rmtree(self.temp_dir)
 
-        print(f"There are totally {len(self.mcp_data['input_ids'])} documents with category indicative terms by word count.")
+        print(f"There are totally {len(self.mcp_data_tf['input_ids'])} documents with category indicative terms by word count.")
 
     # masked category prediction (distributed function)
     def mcp_dist(self, rank, epochs=5, loader_name="mcp_model.pt"):
@@ -996,22 +996,25 @@ class LOTClassTrainer(object):
 
 
 
-    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index, term_count, word_to_index, doc_freq_thresh):
+    def get_rank_matrix(self, docfreq, inv_docfreq, label_count, label_docs_dict, term_count, word_to_index, doc_freq_thresh):
         E_LT = np.zeros((label_count, term_count))
         components = {}
 
+        def dummy(doc):
+            return doc
 
         for l in label_docs_dict:
             components[l] = {}
-            docs = label_docs_dict[l]
-            #TODO ADDED FIX
+            docfreq_local = calculate_doc_freq(docs)
+
+            docs = [list(map(str,arr)) for arr in label_docs_dict[l]]
+
             if len(docs) != 0:
-                docfreq_local = calculate_doc_freq(docs)
-                vect = CountVectorizer(tokenizer=lambda x: x.split())
+                vect = CountVectorizer(tokenizer=dummy, preprocessor=dummy)
                 X = vect.fit_transform(docs)
                 rel_freq = X.sum(axis=0) / len(docs)
                 rel_freq = np.asarray(rel_freq).reshape(-1)
-                names = vect.get_feature_names()
+                names = [int(num) for num in vect.get_feature_names()]
 
                 for i, name in enumerate(names):
                     try:
@@ -1019,15 +1022,15 @@ class LOTClassTrainer(object):
                             continue
                     except:
                         continue
-                    E_LT[l][word_to_index[name]] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[
+                    E_LT[l][name] = (docfreq_local[name] / docfreq[name]) * inv_docfreq[
                         name] * np.tanh(rel_freq[i])
                     components[l][name] = {"reldocfreq": docfreq_local[name] / docfreq[name],
                                            "idf": inv_docfreq[name],
                                            "rel_freq": np.tanh(rel_freq[i]),
-                                           "rank": E_LT[l][word_to_index[name]]}
+                                           "rank": E_LT[l][name]}
         return E_LT, components
 
-    def expand(self, E_LT, index_to_label, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
+    def expand(self, E_LT, index_to_word, it, label_count, old_label_term_dict, label_docs_dict, n1):
 
         word_map = {}
         zero_docs_labels = set()
@@ -1043,17 +1046,7 @@ class LOTClassTrainer(object):
                 n = 100 #min(n1 * (it), int(math.log(len(label_docs_dict[l]), 1.5)))
                 inds_popular = E_LT[l].argsort()[::-1][:n]
                 for num, word_ind in enumerate(inds_popular):
-
                     word = index_to_word[word_ind]
-                    #if the word is not in the Bert vocabualry i can just skip
-                    if word not in self.vocab:
-                        continue
-                    if word in stopwords_vocab:
-                        continue
-                    if word in string.punctuation:
-                        continue
-                    if any(char.isdigit() for char in word):
-                        continue
                     #if i found 20 good words i can quit
                     if count == N:
                         break
@@ -1087,9 +1080,9 @@ class LOTClassTrainer(object):
         ### VARIABLES INTEGRATION
         label_count = self.num_class
         #TODO HARDCODED
-        index_to_label = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
-        label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
-        label_to_index = dict([(i,x) for (x,i) in index_to_label.items()])
+        #index_to_label = {0: 'politics', 1: 'sports', 2:'business', 3: 'technology'}
+        #label_term_dict = {0: ['politics'], 1: ['sports'], 2:['business'], 3: ['technology']}
+        #label_to_index = dict([(i,x) for (x,i) in index_to_label.items()])
 
         pred_label_file = os.path.join(self.dataset_dir, "pred_labels_train.pt")
 
@@ -1107,43 +1100,38 @@ class LOTClassTrainer(object):
             pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred").numpy()
             torch.save(pred_labels, pred_label_file)
 
-        df = data['input_ids'].numpy()
-        df = [self.tokenizer.decode(doc).replace('[PAD]','').strip() for doc in df] #TODO remove special tokens [mask] [CLS] [SEP] from output
+        df = data["tensor_spacy"].numpy()
 
-        from nltk.tokenize import RegexpTokenizer
-        tokenizerPunct = RegexpTokenizer(r'\w+')
-
-        df = [' '.join(tokenizerPunct.tokenize(sent)) for sent in df]
+        if len(self.label_name_dict_spacy.keys()) == 0:
+            self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(
+                os.path.join(self.dataset_dir, 'spacy_data.pt'))
 
         #FOR TESTING use random prediction as the 120k preds take a lot of time
         #import random
         #pred_labels = np.array([random.sample([0,1,2,3],1)[0] for x in range(len(df))])
 
-        label_docs_dict = get_label_docs_dict(df, label_term_dict, pred_labels)
+        label_docs_dict = get_label_docs_dict(df, self.label_name_dict_spacy, pred_labels)
 
         print([len(x) for y,x in label_docs_dict.items()])
-        word_vec = preprocess(df)
-        word_to_index, index_to_word = create_word_index_maps(word_vec)
 
         docfreq = calculate_df_doc_freq(df)
         inv_docfreq = calculate_inv_doc_freq(df, docfreq)
-        #TODO remove punctuation connected to tokens
 
-        term_count = len(word_to_index)
-        E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict, label_to_index,
-                                                term_count, word_to_index, doc_freq_thresh=5)
+        term_count = len(self.spacyWord2Idx)
+        E_LT, components = self.get_rank_matrix(docfreq, inv_docfreq, label_count, label_docs_dict,
+                                                term_count, self.spacyWord2Idx, doc_freq_thresh=5)
 
-        label_term_dict = self.expand(E_LT, index_to_label, index_to_word, 1, label_count, label_term_dict, label_docs_dict, n1=5)
+        label_term_dict = self.expand(E_LT, self.spacyIdx2Word, 1, label_count, self.label_name_dict_spacy, label_docs_dict, n1=5)
 
         print('Expansion: ', label_term_dict)
 
         # save the extended one in 'ext_label_names.txt'
         with open(os.path.join(self.dataset_dir, 'ext_label_names.txt'), "w+") as f:
             #I have to be sure there are no duplicates
-            labelss = [x[1] for x in index_to_label.items()]
+            labelss = [x[1] for x in self.label_name_dict_spacy.items()]
             num_seed_to_add=1
             for l, seeds in sorted(label_term_dict.items(), key=lambda x: x[0]):
-                f.write(index_to_label[l])
+                f.write(self.spacyWord2Idx[l])
                 cc = 0
                 for w in seeds:
                     #exit if the correct number of seed is added
