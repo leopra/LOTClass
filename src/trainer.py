@@ -1082,19 +1082,19 @@ class LOTClassTrainer(object):
 
         pred_label_file = os.path.join(self.dataset_dir, "pred_labels_train.pt")
 
-        #### PREDICTION AND EXPANSION
-        # if os.path.exists(pred_label_file):
-        #     pred_labels = torch.load(pred_label_file)
-        # else:
-        #     loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
-        #     assert os.path.exists(loader_file)
-        #     print(f"\nLoading final model from {loader_file}, seed expansion")
-        #     self.model.load_state_dict(torch.load(loader_file))
-        #     self.model.to(0)
-        #     train_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
-        #     train_dataset_loader = DataLoader(train_set, sampler=SequentialSampler(train_set), batch_size=self.eval_batch_size)
-        #     pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred").numpy()
-        #     torch.save(pred_labels, pred_label_file)
+        ### PREDICTION AND EXPANSION
+        if os.path.exists(pred_label_file):
+            pred_labels = torch.load(pred_label_file)
+        else:
+            loader_file = os.path.join(self.dataset_dir, "mcp_model.pt")
+            assert os.path.exists(loader_file)
+            print(f"\nLoading final model from {loader_file}, seed expansion")
+            self.model.load_state_dict(torch.load(loader_file))
+            self.model.to(0)
+            train_set = TensorDataset(self.train_data["input_ids"], self.train_data["attention_masks"])
+            train_dataset_loader = DataLoader(train_set, sampler=SequentialSampler(train_set), batch_size=self.eval_batch_size)
+            pred_labels = self.inference(self.model, train_dataset_loader, 0, return_type="pred").numpy()
+            torch.save(pred_labels, pred_label_file)
 
         df = data["tensor_spacy"].numpy()
 
@@ -1103,8 +1103,8 @@ class LOTClassTrainer(object):
                 os.path.join(self.dataset_dir, 'spacy_data.pt'))
 
         #FOR TESTING use random prediction as the 120k preds take a lot of time
-        import random
-        pred_labels = np.array([random.sample([0,1,2,3,4,5,6,7,8,9,10,11,12],1)[0] for x in range(len(df))])
+        # import random
+        # pred_labels = np.array([random.sample([0,1,2,3,4,5,6,7,8,9,10,11,12],1)[0] for x in range(len(df))])
 
         label_docs_dict = get_label_docs_dict(df, self.label_name_dict_spacy, pred_labels)
 
