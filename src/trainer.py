@@ -130,6 +130,7 @@ class LOTClassTrainer(object):
         y = []
         X = []
         for index, tokens in enumerate(df):
+            X.append(tokens)
             words = tokens.numpy()
             count_dict = {}
             flag = 0
@@ -151,11 +152,10 @@ class LOTClassTrainer(object):
                             count_dict[l][word] = 1
             if flag:
                 lbl = argmax_label(count_dict)
-                if not lbl:
+                if lbl is None:
                     y.append(-1)
                 else:
                     y.append(lbl)
-                    X.append(tokens)
             else:
                 y.append(-1)
         # if (np.array(y) != -1).any():
@@ -605,7 +605,7 @@ class LOTClassTrainer(object):
             for f in os.listdir(self.temp_dir):
                 if f[-3:] == '.pt':
                     gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
-            #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!" #TODO put back
+            assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!" #TODO put back
             all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
             all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
             all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
@@ -684,7 +684,7 @@ class LOTClassTrainer(object):
 
 
     # prepare self supervision on [CLS] token prediction using the argmax of seedwords wordcount
-    def prepare_mcp_word_count(self, loader_name="mcp_train_cls.pt"):
+    def prepare_mcp_word_count(self, loader_name="mcp_train_cls.pt", external_dict=None):
         if len(self.label_name_dict_spacy.keys()) == 0:
             self.spacyWord2Idx, self.spacyIdx2Word, self.label_name_dict_spacy = torch.load(
                 os.path.join(self.dataset_dir, 'spacy_data.pt'))
