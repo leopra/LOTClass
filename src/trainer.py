@@ -85,6 +85,7 @@ class LOTClassTrainer(object):
             except:
                 lemmDocs.append(['[VUOTA]'])
 
+        print(len(lemmDocs), lemmDocs[-1])
         vectorizer = CountVectorizer(analyzer=lambda x: x)
         vectorizer.fit_transform(lemmDocs)  # sparse matrix with columns corresponding to words
         words = vectorizer.vocabulary_
@@ -93,6 +94,7 @@ class LOTClassTrainer(object):
         for j,doc in enumerate(lemmDocs):
             for i, tok in enumerate(doc):
                 encodedText[j,i] = words[tok]
+
 
         np.savetxt(loader_file, np.array(lemmDocs), delimiter=" ", newline="\n", fmt="%s")
 
