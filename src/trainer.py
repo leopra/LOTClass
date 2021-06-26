@@ -225,8 +225,11 @@ class LOTClassTrainer(object):
 
             results = self.encode(docs)
             print(len(results[0]), len(results[1]), "aaaaaaaaa")
-            input_ids = torch.cat([result[0] for result in results])
-            attention_masks = torch.cat([result[1] for result in results])
+            input_ids = results[0]
+            attention_masks = results[1]
+
+            #input_ids = torch.cat([result[0] for result in results])
+            #attention_masks = torch.cat([result[1] for result in results])
             print(len(input_ids), 'sfsaffassf')
             spacy_lemm = tensor_spacy
             print(f"Saving encoded texts into {loader_file}")
@@ -253,8 +256,8 @@ class LOTClassTrainer(object):
                 #chunk_size = ceil(len(docs) / self.num_cpus)
                 #chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
                 results = self.label_name_occurrence(docs)
-                input_ids_with_label_name = torch.cat([result[0] for result in results])
-                attention_masks_with_label_name = torch.cat([result[1] for result in results])
+                input_ids_with_label_name = results[0]
+                attention_masks_with_label_name = results[1]
                 label_name_idx = torch.cat([result[2] for result in results])
                 assert len(input_ids_with_label_name) > 0, "No label names appear in corpus!"
                 label_name_data = {"input_ids": input_ids_with_label_name, "attention_masks": attention_masks_with_label_name, "labels": label_name_idx}
