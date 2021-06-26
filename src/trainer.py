@@ -187,11 +187,12 @@ class LOTClassTrainer(object):
 
     # convert a list of strings to token ids
     def encode(self, docs):
-        encoded_dict = self.tokenizer.batch_encode_plus(docs, add_special_tokens=True, max_length=self.max_len, padding='max_length',
+        encoded_dict = self.tokenizer.batch_encode_plus(docs[0], add_special_tokens=True, max_length=self.max_len, padding='max_length',
                                                         return_attention_mask=True, truncation=True, return_tensors='pt')
         input_ids = encoded_dict['input_ids']
         attention_masks = encoded_dict['attention_mask']
-        return input_ids, attention_masks
+        spacy_lemm = docs[1]
+        return input_ids, attention_masks, spacy_lemm
 
     # convert list of token ids to list of strings
     def decode(self, ids):
@@ -217,17 +218,18 @@ class LOTClassTrainer(object):
 
             print(f"Converting texts into tensors.")
             chunk_size = ceil(len(docs) / self.num_cpus)
-            chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
+            chunks = [[docs[x:x+chunk_size], tensor_spacy[x:x+chunk_size]] for x in range(0, len(docs), chunk_size)]
             results = Parallel(n_jobs=self.num_cpus)(delayed(self.encode)(docs=chunk) for chunk in chunks)
             input_ids = torch.cat([result[0] for result in results])
             attention_masks = torch.cat([result[1] for result in results])
+            spacy_lemm = torch.cat([result[2] for result in results])
             print(f"Saving encoded texts into {loader_file}")
             if label_file is not None:
                 print(f"Reading labels from {os.path.join(dataset_dir, label_file)}")
                 truth = open(os.path.join(dataset_dir, label_file))
                 labels = [int(label.strip()) for label in truth.readlines()]
                 labels = torch.tensor(labels)
-                data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels, "tensor_spacy": tensor_spacy, "reference": reference}
+                data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels, "tensor_spacy": spacy_lemm, "reference": reference}
             else:
                 data = {"input_ids": input_ids, "attention_masks": attention_masks, "tensor_spacy": tensor_spacy, "reference": reference}
             torch.save(data, loader_file)
@@ -727,7 +729,7 @@ class LOTClassTrainer(object):
     # masked category prediction (distributed function)
     def mcp_dist(self, rank, epochs=5, loader_name="mcp_model.pt"):
         model = self.set_up_dist(rank)
-        mcp_dataset_loader = self.make_dataloader(rank, self.mcp_data, self.train_batch_size)
+        mcp_dataset_loader = self.make_dataloader(rank, self.mcp_data_mixed, self.train_batch_size)
         total_steps = len(mcp_dataset_loader) * epochs / self.accum_steps
         optimizer = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=2e-5, eps=1e-8)
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0.1*total_steps, num_training_steps=total_steps)
@@ -783,6 +785,7 @@ class LOTClassTrainer(object):
 
         mcpad = {"input_ids": [], "attention_masks": [], "reference": [], "labels": []}
 
+        self.mcp_data_mixed = mcp.copy()
         #TODO for now i just remove cls found in same document as mcp , im modifying the self.train_mcp permanently
         for el in zip(cls["input_ids"], cls["attention_masks"], cls["reference"], cls["labels"]):
             if el[2] not in duplicaterefs:
@@ -791,10 +794,10 @@ class LOTClassTrainer(object):
                 mcpad["reference"].append(el[2].numpy().tolist())
                 mcpad["labels"].append(el[3].numpy())
 
-        mcp["input_ids"] = torch.cat((mcp["input_ids"],torch.tensor(mcpad["input_ids"])) , dim=0)
-        mcp["attention_masks"] = torch.cat((mcp["attention_masks"],torch.tensor(mcpad["attention_masks"])) , dim=0)
-        mcp["reference"] = torch.cat((mcp["reference"],torch.tensor(mcpad["reference"])) , dim=0)
-        mcp["labels"] = torch.cat((mcp["labels"],torch.tensor(mcpad["labels"])) , dim=0)
+        self.mcp_data_mixed["input_ids"] = torch.cat((self.mcp_data_mixed["input_ids"],torch.tensor(mcpad["input_ids"])) , dim=0)
+        self.mcp_data_mixed["attention_masks"] = torch.cat((self.mcp_data_mixed["attention_masks"],torch.tensor(mcpad["attention_masks"])) , dim=0)
+        self.mcp_data_mixed["reference"] = torch.cat((self.mcp_data_mixed["reference"],torch.tensor(mcpad["reference"])) , dim=0)
+        self.mcp_data_mixed["labels"] = torch.cat((self.mcp_data_mixed["labels"],torch.tensor(mcpad["labels"])) , dim=0)
 
 
     # masked category prediction
