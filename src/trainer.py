@@ -248,9 +248,9 @@ class LOTClassTrainer(object):
                 corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
                 docs = [doc.strip() for doc in corpus.readlines()]
                 print("Locating label names in the corpus.")
-                chunk_size = ceil(len(docs) / self.num_cpus)
-                chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
-                results = Parallel(n_jobs=self.num_cpus)(delayed(self.label_name_occurrence)(docs=chunk) for chunk in chunks)
+                #chunk_size = ceil(len(docs) / self.num_cpus)
+                #chunks = [docs[x:x+chunk_size] for x in range(0, len(docs), chunk_size)]
+                results = self.label_name_occurrence(docs)
                 input_ids_with_label_name = torch.cat([result[0] for result in results])
                 attention_masks_with_label_name = torch.cat([result[1] for result in results])
                 label_name_idx = torch.cat([result[2] for result in results])
