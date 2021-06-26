@@ -75,7 +75,7 @@ class LOTClassTrainer(object):
         nlp = spacy.load("en_core_web_sm")
         lemmDocs = []
         max_len = 0
-        for doc in nlp.pipe(docs[:10], disable=["tok2vec","parser"]):
+        for doc in nlp.pipe(docs, disable=["tok2vec","parser"]):
             # Do something with the doc here
             try:
                 k = [n.lemma_ for n in doc]
