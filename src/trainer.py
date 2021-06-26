@@ -75,7 +75,7 @@ class LOTClassTrainer(object):
         nlp = spacy.load("en_core_web_sm")
         lemmDocs = []
         max_len = 0
-        for doc in nlp.pipe(docs, disable=["tok2vec","parser"]):
+        for doc in nlp.pipe(docs[:10], disable=["tok2vec","parser"]):
             # Do something with the doc here
             try:
                 k = [n.lemma_ for n in doc]
@@ -93,7 +93,9 @@ class LOTClassTrainer(object):
         for j,doc in enumerate(lemmDocs):
             for i, tok in enumerate(doc):
                 encodedText[j,i] = words[tok]
-        torch.save(encodedText, loader_file)
+
+        np.savetxt(loader_file, np.array(lemmDocs), delimiter=" ", newline="\n", fmt="%s")
+
 
         self.spacyWord2Idx = words
         self.spacyIdx2Word = {x:i for i,x in words.items()}
