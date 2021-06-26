@@ -75,7 +75,7 @@ class LOTClassTrainer(object):
         nlp = spacy.load("en_core_web_sm")
         lemmDocs = []
         max_len = 0
-        for doc in nlp.pipe(docs, disable=["tok2vec","parser"]):
+        for doc in nlp.pipe(docs[:100]):
             # Do something with the doc here
             try:
                 k = [n.lemma_ for n in doc]
@@ -189,12 +189,11 @@ class LOTClassTrainer(object):
 
     # convert a list of strings to token ids
     def encode(self, docs):
-        encoded_dict = self.tokenizer.batch_encode_plus(docs[0], add_special_tokens=True, max_length=self.max_len, padding='max_length',
+        encoded_dict = self.tokenizer.batch_encode_plus(docs, add_special_tokens=True, max_length=self.max_len, padding='max_length',
                                                         return_attention_mask=True, truncation=True, return_tensors='pt')
         input_ids = encoded_dict['input_ids']
         attention_masks = encoded_dict['attention_mask']
-        spacy_lemm = docs[1]
-        return input_ids, attention_masks, spacy_lemm
+        return input_ids, attention_masks
 
     # convert list of token ids to list of strings
     def decode(self, ids):
@@ -219,12 +218,13 @@ class LOTClassTrainer(object):
             reference = torch.tensor([x for x in range(len(tensor_spacy))])
 
             print(f"Converting texts into tensors.")
-            chunk_size = ceil(len(docs) / self.num_cpus)
-            chunks = [[docs[x:x+chunk_size], tensor_spacy[x:x+chunk_size]] for x in range(0, len(docs), chunk_size)]
-            results = Parallel(n_jobs=self.num_cpus)(delayed(self.encode)(docs=chunk) for chunk in chunks)
+            #chunk_size = ceil(len(docs) / self.num_cpus)
+            #chunks = [[docs[x:x+chunk_size], tensor_spacy[x:x+chunk_size]] for x in range(0, len(docs), chunk_size)]
+
+            results = self.encode(docs)
             input_ids = torch.cat([result[0] for result in results])
             attention_masks = torch.cat([result[1] for result in results])
-            spacy_lemm = torch.cat([result[2] for result in results])
+            spacy_lemm = tensor_spacy
             print(f"Saving encoded texts into {loader_file}")
             if label_file is not None:
                 print(f"Reading labels from {os.path.join(dataset_dir, label_file)}")
