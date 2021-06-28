@@ -67,6 +67,7 @@ class LOTClassTrainer(object):
         self.spacyWord2Idx = {}
         self.spacyIdx2Word = {}
         self.label_name_dict_spacy = {}
+        self.strict_thresh = args.strict_thresh
 
     def computeLemmSpacy(self, docs, spacy_text_file):
         loader_file = os.path.join(self.dataset_dir, spacy_text_file)
@@ -526,7 +527,7 @@ class LOTClassTrainer(object):
             print(f"Class {i} category vocabulary: {[self.inv_vocab[w] for w in category_vocab]}\n")
 
     # prepare self supervision for masked category prediction (distributed function)
-    def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt", strictThreshClass = []):
+    def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt", strictThreshClass = [8]):
 
         model = self.set_up_dist(rank)
         model.eval()
@@ -551,7 +552,7 @@ class LOTClassTrainer(object):
                     for i, category_vocab in self.category_vocab.items():
                         k = 1
                         if i in strictThreshClass:
-                            k = 2
+                            k = self.strict_thresh
                         match_idx = torch.zeros_like(sorted_res).bool()
                         for word_id in category_vocab:
                             match_idx = (sorted_res == word_id) | match_idx #TODO what is going on here
