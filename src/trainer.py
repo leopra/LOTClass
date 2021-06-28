@@ -651,6 +651,8 @@ class LOTClassTrainer(object):
         all_input_ids = []
         all_input_mask = []
         all_reference = []
+        all_mask_label = []
+        all_spacy_lemm = []
         category_doc_num = Counter()
         wrap_train_dataset_loader = tqdm(train_dataset_loader) if rank == 0 else train_dataset_loader
         for batch in wrap_train_dataset_loader:
@@ -675,18 +677,21 @@ class LOTClassTrainer(object):
                 all_mask_label.append(mask_label[valid_doc])
                 all_input_mask.append(input_mask[valid_doc])
                 all_reference.append(reference[valid_doc])
+                all_spacy_lemm.append(spacy_lemm[valid_doc])
                 category_doc_num = category_doc_num + Counter(y_cls.tolist()) #TODO add this count feature
 
         all_input_ids = torch.cat(all_input_ids, dim=0)
         all_mask_label = torch.cat(all_mask_label, dim=0)
         all_input_mask = torch.cat(all_input_mask, dim=0)
         all_reference = torch.cat(all_reference, dim=0)
+        all_spacy_lemm = torch.cat(all_spacy_lemm, dim=0)
         save_dict = {
             "all_input_ids": all_input_ids,
             "all_mask_label": all_mask_label,
             "all_input_mask": all_input_mask,
             "all_reference": all_reference,
             "category_doc_num": category_doc_num,
+            "spacy_lemm": all_spacy_lemm
         }
         save_file = os.path.join(self.temp_dir, f"{rank}_" + loader_name)
         #print('saved', save_file)
