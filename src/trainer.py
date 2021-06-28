@@ -224,13 +224,11 @@ class LOTClassTrainer(object):
             #chunks = [[docs[x:x+chunk_size], tensor_spacy[x:x+chunk_size]] for x in range(0, len(docs), chunk_size)]
 
             results = self.encode(docs)
-            print(len(results[0]), len(results[1]), "aaaaaaaaa")
             input_ids = results[0]
             attention_masks = results[1]
 
             #input_ids = torch.cat([result[0] for result in results])
             #attention_masks = torch.cat([result[1] for result in results])
-            print(len(input_ids), 'sfsaffassf')
             spacy_lemm = tensor_spacy
             print(f"Saving encoded texts into {loader_file}")
             if label_file is not None:
