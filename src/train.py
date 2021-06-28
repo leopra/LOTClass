@@ -49,7 +49,7 @@ def main():
                         help='distributed training port id; any number between 10000 and 20000 will work')
     parser.add_argument('--enhance', type=int, default=0,
                         help='enable enhancement with argmax on CLS')
-    parser.add_argument('strict_thresh', type=float,
+    parser.add_argument('strict_thresh', type=float, default=1,
                         help="value of strict thresh for some classes")
 
     args = parser.parse_args()
