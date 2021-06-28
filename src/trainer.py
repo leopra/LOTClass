@@ -735,7 +735,7 @@ class LOTClassTrainer(object):
                             category_doc_num[i] += res["category_doc_num"][i]
 
                 print(f"Number of documents with category indicative word count found for each category is: {category_doc_num}")
-                self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "spacy_lemm": all_spacy
+                self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "spacy_lemm": all_spacy,
                                  "labels": all_mask_label, "reference": all_reference}
 
                 torch.save(self.mcp_data_tf, loader_file)
