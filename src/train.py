@@ -47,6 +47,8 @@ def main():
                         help='number of gpus to use')
     parser.add_argument('--dist_port', type=int, default=12345,
                         help='distributed training port id; any number between 10000 and 20000 will work')
+    parser.add_argument('--enhance', type=int, default=0,
+                        help='enable enhancement with argmax on CLS')
 
     args = parser.parse_args()
     print(args)

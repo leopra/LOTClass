@@ -32,6 +32,7 @@ from collections import Counter
 class LOTClassTrainer(object):
 
     def __init__(self, args):
+        self.enhance = args.enhance
         self.args = args
         self.max_len = args.max_len
         self.dataset_dir = args.dataset_dir
@@ -783,28 +784,32 @@ class LOTClassTrainer(object):
         except RuntimeError as err:
             self.cuda_mem_error(err, "train", rank)
 
-    def build_mixed_dataset(self, data1_mlp="mcp_train.pt", data2_cls="mcp_train_cls.pt"):
-        mcp = self.mcp_data
-        cls = self.mcp_data_tf
-        setmcp = set(mcp["reference"].numpy())
-        setcls = set(cls["reference"].numpy())
-        duplicaterefs = setmcp.intersection(setcls)
+    def build_mixed_dataset(self, enhance=1):
+        #data1_mlp = "mcp_train.pt", data2_cls = "mcp_train_cls.pt"
+        if enhance == 0:
+            self.mcp_data_mixed = self.mcp_data
+        else:
+            mcp = self.mcp_data
+            cls = self.mcp_data_tf
+            setmcp = set(mcp["reference"].numpy())
+            setcls = set(cls["reference"].numpy())
+            duplicaterefs = setmcp.intersection(setcls)
 
-        mcpad = {"input_ids": [], "attention_masks": [], "reference": [], "labels": []}
+            mcpad = {"input_ids": [], "attention_masks": [], "reference": [], "labels": []}
 
-        self.mcp_data_mixed = mcp.copy()
-        #TODO for now i just remove cls found in same document as mcp , im modifying the self.train_mcp permanently
-        for el in zip(cls["input_ids"], cls["attention_masks"], cls["reference"], cls["labels"]):
-            if el[2] not in duplicaterefs:
-                mcpad["input_ids"].append(el[0].numpy())
-                mcpad["attention_masks"].append(el[1].numpy())
-                mcpad["reference"].append(el[2].numpy().tolist())
-                mcpad["labels"].append(el[3].numpy())
+            self.mcp_data_mixed = mcp.copy()
+            #TODO for now i just remove cls found in same document as mcp , im modifying the self.train_mcp permanently
+            for el in zip(cls["input_ids"], cls["attention_masks"], cls["reference"], cls["labels"]):
+                if el[2] not in duplicaterefs:
+                    mcpad["input_ids"].append(el[0].numpy())
+                    mcpad["attention_masks"].append(el[1].numpy())
+                    mcpad["reference"].append(el[2].numpy().tolist())
+                    mcpad["labels"].append(el[3].numpy())
 
-        self.mcp_data_mixed["input_ids"] = torch.cat((self.mcp_data_mixed["input_ids"],torch.tensor(mcpad["input_ids"])) , dim=0)
-        self.mcp_data_mixed["attention_masks"] = torch.cat((self.mcp_data_mixed["attention_masks"],torch.tensor(mcpad["attention_masks"])) , dim=0)
-        self.mcp_data_mixed["reference"] = torch.cat((self.mcp_data_mixed["reference"],torch.tensor(mcpad["reference"])) , dim=0)
-        self.mcp_data_mixed["labels"] = torch.cat((self.mcp_data_mixed["labels"],torch.tensor(mcpad["labels"])) , dim=0)
+            self.mcp_data_mixed["input_ids"] = torch.cat((self.mcp_data_mixed["input_ids"],torch.tensor(mcpad["input_ids"])) , dim=0)
+            self.mcp_data_mixed["attention_masks"] = torch.cat((self.mcp_data_mixed["attention_masks"],torch.tensor(mcpad["attention_masks"])) , dim=0)
+            self.mcp_data_mixed["reference"] = torch.cat((self.mcp_data_mixed["reference"],torch.tensor(mcpad["reference"])) , dim=0)
+            self.mcp_data_mixed["labels"] = torch.cat((self.mcp_data_mixed["labels"],torch.tensor(mcpad["labels"])) , dim=0)
 
 
     # masked category prediction
@@ -820,7 +825,7 @@ class LOTClassTrainer(object):
             print("Creating Labels by Word Count")
             self.prepare_mcp_word_count()
             print("mixing dataset")
-            self.build_mixed_dataset()
+            self.build_mixed_dataset(self.enhance)
             print(f"\nTraining model via masked category prediction.")
             mp.spawn(self.mcp_dist, nprocs=self.world_size, args=(epochs, loader_name))
         self.model.load_state_dict(torch.load(loader_file))
