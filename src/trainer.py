@@ -216,32 +216,44 @@ class LOTClassTrainer(object):
             corpus = open(os.path.join(dataset_dir, text_file), encoding="utf-8")
             docs = [doc.strip() for doc in corpus.readlines()]
 
-            # TODO check if this works
-            spacy_encode = self.computeLemmSpacy(docs, 'spacy_lemm.txt')
-            tensor_spacy = torch.tensor(spacy_encode)
-            reference = torch.tensor([x for x in range(len(tensor_spacy))])
-
             print(f"Converting texts into tensors.")
-            #chunk_size = ceil(len(docs) / self.num_cpus)
-            #chunks = [[docs[x:x+chunk_size], tensor_spacy[x:x+chunk_size]] for x in range(0, len(docs), chunk_size)]
 
             results = self.encode(docs)
             input_ids = results[0]
             attention_masks = results[1]
 
+            if loader_name == 'train.pt':
+                spacy_encode = self.computeLemmSpacy(docs, 'spacy_lemm.txt')
+                tensor_spacy = torch.tensor(spacy_encode)
+                reference = torch.tensor([x for x in range(len(tensor_spacy))])
+                spacy_lemm = tensor_spacy
+
+            #chunk_size = ceil(len(docs) / self.num_cpus)
+            #chunks = [[docs[x:x+chunk_size], tensor_spacy[x:x+chunk_size]] for x in range(0, len(docs), chunk_size)]
             #input_ids = torch.cat([result[0] for result in results])
             #attention_masks = torch.cat([result[1] for result in results])
-            spacy_lemm = tensor_spacy
-            print(f"Saving encoded texts into {loader_file}")
-            if label_file is not None:
-                print(f"Reading labels from {os.path.join(dataset_dir, label_file)}")
-                truth = open(os.path.join(dataset_dir, label_file))
-                labels = [int(label.strip()) for label in truth.readlines()]
-                labels = torch.tensor(labels)
-                data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels, "tensor_spacy": spacy_lemm, "reference": reference}
+                print(f"Saving encoded texts into {loader_file}")
+                if label_file is not None:
+                    print(f"Reading labels from {os.path.join(dataset_dir, label_file)}")
+                    truth = open(os.path.join(dataset_dir, label_file))
+                    labels = [int(label.strip()) for label in truth.readlines()]
+                    labels = torch.tensor(labels)
+                    data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels, "tensor_spacy": spacy_lemm, "reference": reference}
+                else:
+                    data = {"input_ids": input_ids, "attention_masks": attention_masks, "tensor_spacy": tensor_spacy, "reference": reference}
+                torch.save(data, loader_file)
+
             else:
-                data = {"input_ids": input_ids, "attention_masks": attention_masks, "tensor_spacy": tensor_spacy, "reference": reference}
-            torch.save(data, loader_file)
+                print(f"Saving encoded texts into {loader_file}, NO SPACY")
+                if label_file is not None:
+                    print(f"Reading labels from {os.path.join(dataset_dir, label_file)}")
+                    truth = open(os.path.join(dataset_dir, label_file))
+                    labels = [int(label.strip()) for label in truth.readlines()]
+                    labels = torch.tensor(labels)
+                    data = {"input_ids": input_ids, "attention_masks": attention_masks, "labels": labels}
+                else:
+                    data = {"input_ids": input_ids, "attention_masks": attention_masks}
+                    torch.save(data, loader_file)
 
         if find_label_name:
             loader_file = os.path.join(dataset_dir, label_name_loader_name)
