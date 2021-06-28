@@ -691,7 +691,7 @@ class LOTClassTrainer(object):
             "all_input_mask": all_input_mask,
             "all_reference": all_reference,
             "category_doc_num": category_doc_num,
-            "spacy_lemm": all_spacy_lemm
+            "all_spacy_lemm": all_spacy_lemm
         }
         save_file = os.path.join(self.temp_dir, f"{rank}_" + loader_name)
         #print('saved', save_file)
@@ -727,6 +727,7 @@ class LOTClassTrainer(object):
                 all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
                 all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
                 all_reference = torch.cat([res["all_reference"] for res in gather_res], dim=0)
+                all_spacy = torch.cat([res["all_spacy_lemm"] for res in gather_res], dim=0)
                 category_doc_num = {i: 0 for i in range(self.num_class)}
                 for i in category_doc_num:
                     for res in gather_res:
@@ -734,7 +735,7 @@ class LOTClassTrainer(object):
                             category_doc_num[i] += res["category_doc_num"][i]
 
                 print(f"Number of documents with category indicative word count found for each category is: {category_doc_num}")
-                self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask,
+                self.mcp_data_tf = {"input_ids": all_input_ids, "attention_masks": all_input_mask, "spacy_lemm": all_spacy
                                  "labels": all_mask_label, "reference": all_reference}
 
                 torch.save(self.mcp_data_tf, loader_file)
