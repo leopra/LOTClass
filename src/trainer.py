@@ -435,7 +435,7 @@ class LOTClassTrainer(object):
                 dataset = TensorDataset(data_dict["input_ids"], data_dict["attention_masks"])
 
         sampler = DistributedSampler(dataset, num_replicas=self.world_size, rank=rank)
-        dataset_loader = DataLoader(dataset, sampler=sampler, batch_size=batch_size, shuffle=False)
+        dataset_loader = DataLoader(dataset, sampler=sampler, batch_size=batch_size, shuffle=True)
         return dataset_loader
 
     # filter out stop words and words in multiple categories
