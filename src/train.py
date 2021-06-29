@@ -66,7 +66,7 @@ def main():
     trainer.self_train(epochs=args.self_train_epochs, loader_name=args.final_model)
 
     #TODO uncomment this when fixed the error of array outof bounds E_LT
-    trainer.expansion()
+    #trainer.expansion()
 
     #Write test results
     if args.test_file is not None:
