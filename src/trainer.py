@@ -104,8 +104,12 @@ class LOTClassTrainer(object):
         self.spacyWord2Idx = words
         self.spacyIdx2Word = {x:i for i,x in words.items()}
 
+        import json
+        external_file = 'seedwords.json'
+        externalseeds = json.loads(os.path.join(self.dataset_dir, external_file))
+
         encoded_dict = {i:[] for i in self.label_name_dict.keys()}
-        for k,values in self.label_name_dict.items():
+        for k,values in externalseeds.items():
             for v in values:
                 try:
                     encoded_dict[k].append(self.spacyWord2Idx[v])
