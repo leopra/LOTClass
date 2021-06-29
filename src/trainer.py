@@ -833,6 +833,8 @@ class LOTClassTrainer(object):
             self.mcp_data_mixed["reference"] = torch.cat((self.mcp_data_mixed["reference"],torch.tensor(mcpad["reference"])) , dim=0)
             self.mcp_data_mixed["labels"] = torch.cat((self.mcp_data_mixed["labels"],torch.tensor(mcpad["labels"])) , dim=0)
 
+            torch.save(self.mcp_data_mixed, os.path.join(self.dataset_dir, 'mixed.pt'))
+
 
     # masked category prediction
     def mcp(self, top_pred_num=50, match_threshold=20, epochs=5, loader_name="mcp_model.pt"):
