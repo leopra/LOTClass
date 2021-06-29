@@ -73,8 +73,9 @@ class LOTClassTrainer(object):
 
         import json
         external_file = 'seedwords.json'
-        externalseeds = json.loads(os.path.join(self.dataset_dir, external_file))
         print(os.path.join(self.dataset_dir, external_file))
+
+        externalseeds = json.loads(os.path.join(self.dataset_dir, external_file))
         print(externalseeds)
 
         loader_file = os.path.join(self.dataset_dir, spacy_text_file)
