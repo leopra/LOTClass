@@ -71,13 +71,6 @@ class LOTClassTrainer(object):
 
     def computeLemmSpacy(self, docs, spacy_text_file):
 
-        import json
-        external_file = 'seedwords.json'
-        print(os.path.join(self.dataset_dir, external_file))
-
-        externalseeds = json.loads(os.path.join(self.dataset_dir, external_file))
-        print(externalseeds)
-
         loader_file = os.path.join(self.dataset_dir, spacy_text_file)
 
         # TODO could add check to skip calculation if file is saved
@@ -114,7 +107,7 @@ class LOTClassTrainer(object):
 
         import json
         external_file = 'seedwords.json'
-        externalseeds = json.loads(os.path.join(self.dataset_dir, external_file))
+        externalseeds = json.load(open(os.path.join(self.dataset_dir, external_file), 'rb'))
         print(os.path.join(self.dataset_dir, external_file))
 
         encoded_dict = {i:[] for i in self.label_name_dict.keys()}
