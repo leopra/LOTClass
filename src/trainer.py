@@ -110,11 +110,26 @@ class LOTClassTrainer(object):
         externalseeds = json.load(open(os.path.join(self.dataset_dir, external_file), 'rb'))
         print(externalseeds)
 
+        vertical_index = {0: 'agriculture',
+                          1: 'building',
+                          2: 'constructions',
+                          3: 'energy',
+                          4: 'financial services',
+                          5: 'food & beverage',
+                          6: 'healthcare',
+                          7: 'logistics',
+                          8: 'manufacturing',
+                          9: 'mining',
+                          10: 'public administration',
+                          11: 'transportation',
+                          12: 'utilities (electricity, water, waste)'}
+
+        inv_vert = {i:k for k,i in vertical_index.items()}
         encoded_dict = {i:[] for i in self.label_name_dict.keys()}
         for k,values in externalseeds.items():
             for v in values:
                 try:
-                    encoded_dict[k].append(self.spacyWord2Idx[v])
+                    encoded_dict[inv_vert[k]].append(self.spacyWord2Idx[v])
                 except Exception as e:
                     print('exception', e, v)
                     continue
