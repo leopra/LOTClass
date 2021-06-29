@@ -108,7 +108,7 @@ class LOTClassTrainer(object):
         import json
         external_file = 'seedwords.json'
         externalseeds = json.load(open(os.path.join(self.dataset_dir, external_file), 'rb'))
-        print(os.path.join(self.dataset_dir, external_file))
+        print(externalseeds)
 
         encoded_dict = {i:[] for i in self.label_name_dict.keys()}
         for k,values in externalseeds.items():
