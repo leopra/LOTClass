@@ -70,6 +70,13 @@ class LOTClassTrainer(object):
         self.strict_thresh = args.strict_thresh
 
     def computeLemmSpacy(self, docs, spacy_text_file):
+
+        import json
+        external_file = 'seedwords.json'
+        externalseeds = json.loads(os.path.join(self.dataset_dir, external_file))
+        print(os.path.join(self.dataset_dir, external_file))
+        print(externalseeds)
+
         loader_file = os.path.join(self.dataset_dir, spacy_text_file)
 
         # TODO could add check to skip calculation if file is saved
