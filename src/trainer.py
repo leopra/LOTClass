@@ -539,7 +539,7 @@ class LOTClassTrainer(object):
             print(f"Class {i} category vocabulary: {[self.inv_vocab[w] for w in category_vocab]}\n")
 
     # prepare self supervision for masked category prediction (distributed function)
-    def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt", strictThreshClass = [8]):
+    def prepare_mcp_dist(self, rank, top_pred_num=50, match_threshold=20, loader_name="mcp_train.pt", strictThreshClass = list(range(13))):
 
         model = self.set_up_dist(rank)
         model.eval()
