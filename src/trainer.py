@@ -842,21 +842,22 @@ class LOTClassTrainer(object):
 
             mcpad = {"input_ids": [], "attention_masks": [], "reference": [], "labels": []}
 
-            self.mcp_data_mixed = cls.copy()
+            #USE TO train only with CLS
+            #self.mcp_data_mixed = cls.copy()
 
-            #self.mcp_data_mixed = mcp.copy()
+            self.mcp_data_mixed = mcp.copy()
 
-            # for el in zip(cls["input_ids"], cls["attention_masks"], cls["reference"], cls["labels"]):
-            #     if el[2] not in duplicaterefs:
-            #         mcpad["input_ids"].append(el[0].numpy())
-            #         mcpad["attention_masks"].append(el[1].numpy())
-            #         mcpad["reference"].append(el[2].numpy().tolist())
-            #         mcpad["labels"].append(el[3].numpy())
-            #
-            # self.mcp_data_mixed["input_ids"] = torch.cat((self.mcp_data_mixed["input_ids"],torch.tensor(mcpad["input_ids"])) , dim=0)
-            # self.mcp_data_mixed["attention_masks"] = torch.cat((self.mcp_data_mixed["attention_masks"],torch.tensor(mcpad["attention_masks"])) , dim=0)
-            # self.mcp_data_mixed["reference"] = torch.cat((self.mcp_data_mixed["reference"],torch.tensor(mcpad["reference"])) , dim=0)
-            # self.mcp_data_mixed["labels"] = torch.cat((self.mcp_data_mixed["labels"],torch.tensor(mcpad["labels"])) , dim=0)
+            for el in zip(cls["input_ids"], cls["attention_masks"], cls["reference"], cls["labels"]):
+                if el[2] not in duplicaterefs:
+                    mcpad["input_ids"].append(el[0].numpy())
+                    mcpad["attention_masks"].append(el[1].numpy())
+                    mcpad["reference"].append(el[2].numpy().tolist())
+                    mcpad["labels"].append(el[3].numpy())
+
+            self.mcp_data_mixed["input_ids"] = torch.cat((self.mcp_data_mixed["input_ids"],torch.tensor(mcpad["input_ids"])) , dim=0)
+            self.mcp_data_mixed["attention_masks"] = torch.cat((self.mcp_data_mixed["attention_masks"],torch.tensor(mcpad["attention_masks"])) , dim=0)
+            self.mcp_data_mixed["reference"] = torch.cat((self.mcp_data_mixed["reference"],torch.tensor(mcpad["reference"])) , dim=0)
+            self.mcp_data_mixed["labels"] = torch.cat((self.mcp_data_mixed["labels"],torch.tensor(mcpad["labels"])) , dim=0)
 
             torch.save(self.mcp_data_mixed, os.path.join(self.dataset_dir, 'mixed.pt'))
 
