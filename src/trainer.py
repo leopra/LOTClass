@@ -746,7 +746,7 @@ class LOTClassTrainer(object):
             loader_file = os.path.join(self.dataset_dir, loader_name)
 
             if os.path.exists(loader_file):
-                print(f"Loading masked category prediction data from {loader_file}")
+                print(f"Loading word count data from {loader_file}")
                 self.mcp_data_tf = torch.load(loader_file)
             else:
                 loader_file = os.path.join(self.dataset_dir, loader_name)
