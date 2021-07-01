@@ -801,6 +801,8 @@ class LOTClassTrainer(object):
                     mask_pos = labels >= 0
                     labels = labels[mask_pos]
                     # mask out category indicative words
+                    # TODO I don't want to mask CLS token
+                    mask_pos[0] = False
                     #TODO consider masking randomly
                     input_ids[mask_pos] = self.mask_id
                     logits = model(input_ids, 
