@@ -832,10 +832,12 @@ class LOTClassTrainer(object):
         except RuntimeError as err:
             self.cuda_mem_error(err, "train", rank)
 
-    def build_mixed_dataset(self, enhance=1):
+    def build_mixed_dataset(self, enhance=1, only_cls=1):
         #data1_mlp = "mcp_train.pt", data2_cls = "mcp_train_cls.pt"
         if enhance == 0:
             self.mcp_data_mixed = self.mcp_data
+        elif only_cls == 1:
+            self.mcp_data_mixed = self.mcp_data_tf #TODO add console parameter to handle this
         else:
             mcp = self.mcp_data
             cls = self.mcp_data_tf
