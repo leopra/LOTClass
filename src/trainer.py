@@ -799,10 +799,11 @@ class LOTClassTrainer(object):
                     input_mask = batch[1].to(rank)
                     labels = batch[2].to(rank)
                     mask_pos = labels >= 0
+                    mask_pos[0] = False
+
                     labels = labels[mask_pos]
                     # mask out category indicative words
                     # TODO I don't want to mask CLS token
-                    mask_pos[0] = False
                     #TODO consider masking randomly
                     input_ids[mask_pos] = self.mask_id
                     logits = model(input_ids, 
