@@ -51,6 +51,8 @@ def main():
                         help='enable enhancement with argmax on CLS')
     parser.add_argument('--strict_thresh', type=float, default=1,
                         help="value of strict thresh for some classes")
+    parser.add_argument('--only_cls', type=int, default=0,
+                        help="train only using cls and word count")
 
     args = parser.parse_args()
     print(args)

@@ -68,6 +68,7 @@ class LOTClassTrainer(object):
         self.spacyIdx2Word = {}
         self.label_name_dict_spacy = {}
         self.strict_thresh = args.strict_thresh
+        self.only_cls = args.only_cls
 
     def computeLemmSpacy(self, docs, spacy_text_file):
 
@@ -880,7 +881,7 @@ class LOTClassTrainer(object):
             print("Creating Labels by Word Count")
             self.prepare_mcp_word_count(self.enhance)
             print("mixing dataset")
-            self.build_mixed_dataset(self.enhance)
+            self.build_mixed_dataset(self.enhance, self.only_cls)
             print(f"\nTraining model via masked category prediction.")
             mp.spawn(self.mcp_dist, nprocs=self.world_size, args=(epochs, loader_name))
         self.model.load_state_dict(torch.load(loader_file))
