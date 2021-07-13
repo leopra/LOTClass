@@ -838,7 +838,7 @@ class LOTClassTrainer(object):
         if enhance == 0:
             self.mcp_data_mixed = self.mcp_data
         elif only_cls == 1:
-            self.mcp_data_mixed = self.mcp_data_tf #TODO add console parameter to handle this
+            self.mcp_data_mixed = self.mcp_data_tf
         else:
             mcp = self.mcp_data
             cls = self.mcp_data_tf
