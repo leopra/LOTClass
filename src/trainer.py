@@ -147,12 +147,12 @@ class LOTClassTrainer(object):
             maxi = 0
             max_label = None
             for l in count_dict:
-                #atleasttwo = 0 #TODO add this again
+                atleasttwo = 0 #TODO add this again
                 count = 0
                 for t in count_dict[l]:
                     #atleasttwo += 1
                     count += count_dict[l][t]
-                if count > maxi: #and atleasttwo > 1:
+                if count > maxi and atleasttwo > 1:
                     maxi = count
                     max_label = l
             return max_label
