@@ -107,7 +107,7 @@ class LOTClassTrainer(object):
         self.spacyIdx2Word = {x:i for i,x in words.items()}
 
         import json
-        external_file = 'seedwords.json'
+        external_file = 'seedwordsencoded.json'
         externalseeds = json.load(open(os.path.join(self.dataset_dir, external_file), 'rb'))
         print(externalseeds)
 
@@ -217,6 +217,22 @@ class LOTClassTrainer(object):
 
     # convert a list of strings to token ids
     def encode(self, docs):
+        import json
+        #TODO hardcoded
+        with open('/content/gdrive/MyDrive/Eutopia Thesis/bigtomon.json') as f:
+            bigrs = json.load(f)
+
+        bigrs = {i: k for k, i in bigrs.items()}
+
+        def monograms(x):
+            l = x.split(' ')
+            for i, word in enumerate(l):
+                if word in bigrs:
+                    l[i] = bigrs[word]
+            return ' '.join(l)
+
+        docs = [monograms(doc) for doc in docs]
+
         encoded_dict = self.tokenizer.batch_encode_plus(docs, add_special_tokens=True, max_length=self.max_len, padding='max_length',
                                                         return_attention_mask=True, truncation=True, return_tensors='pt')
         input_ids = encoded_dict['input_ids']
