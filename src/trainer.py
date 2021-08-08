@@ -346,7 +346,7 @@ class LOTClassTrainer(object):
                                         attention_mask=input_mask)
                     _, sorted_res = torch.topk(predictions, top_pred_num, dim=-1)
                     for i, category_vocab in self.category_vocab.items():
-                        k = 1
+                        k = 1.4
                         if i in strictThreshClass:
                             k = self.strict_thresh
                         match_idx = torch.zeros_like(sorted_res).bool()
