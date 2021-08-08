@@ -68,6 +68,7 @@ class LOTClassTrainer(object):
         self.spacyIdx2Word = {}
         self.label_name_dict_spacy = {}
         self.strict_thresh = args.strict_thresh
+        self.only_cls = args.only_cls
 
     def computeLemmSpacy(self, docs, spacy_text_file):
 
@@ -146,12 +147,12 @@ class LOTClassTrainer(object):
             maxi = 0
             max_label = None
             for l in count_dict:
-                #atleasttwo = 0 #TODO add this again
+                atleasttwo = 0
                 count = 0
                 for t in count_dict[l]:
-                    #atleasttwo += 1
+                    atleasttwo += 1
                     count += count_dict[l][t]
-                if count > maxi: #and atleasttwo > 1:
+                if count > maxi and atleasttwo > 1:
                     maxi = count
                     max_label = l
             return max_label
@@ -757,7 +758,7 @@ class LOTClassTrainer(object):
                 for f in os.listdir(self.temp_dir):
                     if f[-3:] == '.pt':
                         gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
-                assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
+                #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
                 all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
                 all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
                 all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
@@ -832,10 +833,12 @@ class LOTClassTrainer(object):
         except RuntimeError as err:
             self.cuda_mem_error(err, "train", rank)
 
-    def build_mixed_dataset(self, enhance=1):
+    def build_mixed_dataset(self, enhance=1, only_cls=1):
         #data1_mlp = "mcp_train.pt", data2_cls = "mcp_train_cls.pt"
         if enhance == 0:
             self.mcp_data_mixed = self.mcp_data
+        elif only_cls == 1:
+            self.mcp_data_mixed = self.mcp_data_tf
         else:
             mcp = self.mcp_data
             cls = self.mcp_data_tf
@@ -878,7 +881,7 @@ class LOTClassTrainer(object):
             print("Creating Labels by Word Count")
             self.prepare_mcp_word_count(self.enhance)
             print("mixing dataset")
-            self.build_mixed_dataset(self.enhance)
+            self.build_mixed_dataset(self.enhance, self.only_cls)
             print(f"\nTraining model via masked category prediction.")
             mp.spawn(self.mcp_dist, nprocs=self.world_size, args=(epochs, loader_name))
         self.model.load_state_dict(torch.load(loader_file))
