@@ -758,7 +758,7 @@ class LOTClassTrainer(object):
                 for f in os.listdir(self.temp_dir):
                     if f[-3:] == '.pt':
                         gather_res.append(torch.load(os.path.join(self.temp_dir, f)))
-                assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
+                #assert len(gather_res) == self.world_size, "Number of saved files not equal to number of processes!"
                 all_input_ids = torch.cat([res["all_input_ids"] for res in gather_res], dim=0)
                 all_mask_label = torch.cat([res["all_mask_label"] for res in gather_res], dim=0)
                 all_input_mask = torch.cat([res["all_input_mask"] for res in gather_res], dim=0)
