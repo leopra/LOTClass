@@ -7,6 +7,7 @@ import sys
 class LOTClassModel(BertPreTrainedModel):
 
     def __init__(self, config):
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", config.hidden_size)
         super().__init__(config)
         self.num_labels = config.num_labels
         self.bert = BertModel(config, add_pooling_layer=False)
